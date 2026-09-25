@@ -4,11 +4,11 @@
 
 **Blocked by:** 02-landing-page-dynamic-toggle
 
-**Status:** ready-for-agent
+**Status:** DONE
 
-- [ ] Write API tests for registration endpoint (duplicate rejection, successful insertion, mock logging) (TDD Approach).
-- [ ] Create the public registration form UI.
-- [ ] Implement backend API to validate `(full_name, whatsapp_number)` constraint.
-- [ ] Generate unique `qr_token` and save participant to DB.
-- [ ] Implement Mock WhatsApp Service to log the sent QR code.
-- [ ] Ensure tests pass.
+- [x] Write API tests for registration endpoint (duplicate rejection, successful insertion, mock logging) (TDD Approach).
+- [x] Create the public registration form UI.
+- [x] Implement backend API to validate `(full_name, whatsapp_number)` constraint.
+- [x] Generate unique `qr_token` and save participant to DB.
+- [x] Implement Mock WhatsApp Service to log the sent QR code.
+- [x] Ensure tests pass.
