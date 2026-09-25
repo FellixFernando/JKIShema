@@ -37,7 +37,7 @@ describe('Registration Service (Single Participant)', () => {
         church_branch: 'JKI Shema Pusat',
         is_wa_opt_in: true,
       })
-    ).rejects.toThrow('Peserta dengan Nama dan Nomor WhatsApp tersebut sudah terdaftar.')
+    ).rejects.toThrow('Peserta dengan Nama "Budi Santoso" dan Nomor WhatsApp tersebut sudah terdaftar.')
   })
 
   it('should reject registration if max quota is reached', async () => {

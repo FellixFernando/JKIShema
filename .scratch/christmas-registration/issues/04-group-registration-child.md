@@ -4,10 +4,10 @@
 
 **Blocked by:** 03-single-registration-qr
 
-**Status:** ready-for-agent
+**Status:** DONE
 
-- [ ] Write API and UI tests for batch registration and child WA inheritance logic (TDD Approach).
-- [ ] Update form UI to support "Tambah Peserta" (Add Participant) and the "Anak" (Child) checkbox.
-- [ ] Update backend registration API to handle array payloads (batch insert).
-- [ ] Automatically assign the primary registrant's WA number to any child participant.
-- [ ] Ensure tests pass.
+- [x] Write API and UI tests for batch registration and child WA inheritance logic (TDD Approach).
+- [x] Update form UI to support "Tambah Peserta" (Add Participant) and the "Anak" (Child) checkbox.
+- [x] Update backend registration API to handle array payloads (batch insert).
+- [x] Automatically assign the primary registrant's WA number to any child participant.
+- [x] Ensure tests pass.
