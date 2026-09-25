@@ -4,9 +4,9 @@
 
 **Blocked by:** 01-project-scaffolding-admin-auth
 
-**Status:** ready-for-agent
+**Status:** DONE
 
-- [ ] Write failing UI and integration tests for public page routing and config toggle behavior (TDD Approach).
-- [ ] Build the landing page sections (Hero, About, Gallery, Leaders).
-- [ ] Implement dynamic CTA button visibility based on `SystemConfig`'s `is_registration_open` flag.
-- [ ] Ensure tests pass.
+- [x] Write failing UI and integration tests for public page routing and config toggle behavior (TDD Approach).
+- [x] Build the landing page sections (Hero, About, Gallery, Leaders).
+- [x] Implement dynamic CTA button visibility based on `SystemConfig`'s `is_registration_open` flag.
+- [x] Ensure tests pass.
