@@ -48,5 +48,18 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  // Ensure cookies work seamlessly over HTTP network IP on mobile devices
+  useSecureCookies: false,
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,
+      },
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET || "default_secret_for_development",
 };
