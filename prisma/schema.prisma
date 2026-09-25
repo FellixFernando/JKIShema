@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  MASTER
+  ADMIN
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CHECKED_IN
+  CANCELLED
+}
+
+enum RegistrationType {
+  ONLINE
+  ON_SITE
+}
+
+enum ChurchStatus {
+  BERGEREJA
+  TIDAK_BERGEREJA
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  password_hash String
+  role          Role     @default(ADMIN)
+  created_at    DateTime @default(now())
+}
+
+model Participant {
+  id                String             @id @default(uuid())
+  full_name         String
+  whatsapp_number   String
+  church_status     ChurchStatus       @default(BERGEREJA)
+  church_branch     String?
+  is_child          Boolean            @default(false)
+  is_wa_opt_in      Boolean            @default(true)
+  qr_token          String             @unique @default(uuid())
+  status            RegistrationStatus @default(REGISTERED)
+  registration_type RegistrationType   @default(ONLINE)
+  checked_in_at     DateTime?
+  created_at        DateTime           @default(now())
+
+  @@unique([full_name, whatsapp_number])
+}
+
+model SystemConfig {
+  key   String @id
+  value String
+}
