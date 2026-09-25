@@ -36,7 +36,7 @@ export default function AdminDashboardPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
-  const [isRegOpen, setIsRegOpen] = useState(true)
+  const [actionMsg, setActionMsg] = useState('')
 
   const fetchStats = useCallback(async () => {
     try {
@@ -73,6 +73,32 @@ export default function AdminDashboardPage() {
     fetchParticipants()
   }, [fetchStats, fetchParticipants])
 
+  const handleManualCheckIn = async (participantId: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin melakukan Manual Check-In untuk "${name}"?`)) {
+      return
+    }
+
+    try {
+      const res = await fetch('/api/admin/checkin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: participantId }),
+      })
+
+      if (res.ok) {
+        setActionMsg(`✓ Manual Check-in berhasil untuk ${name}!`)
+        fetchStats()
+        fetchParticipants()
+        setTimeout(() => setActionMsg(''), 4000)
+      } else {
+        const data = await res.json()
+        alert(`Gagal: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
       {/* Header */}
@@ -105,6 +131,13 @@ export default function AdminDashboardPage() {
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
+        {/* Action Message Banner */}
+        {actionMsg && (
+          <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded-2xl text-sm font-semibold animate-in fade-in">
+            {actionMsg}
+          </div>
+        )}
+
         {/* Overview Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -189,7 +222,7 @@ export default function AdminDashboardPage() {
                   <th className="py-3 px-4">Gereja / Cabang</th>
                   <th className="py-3 px-4">Status Acara</th>
                   <th className="py-3 px-4">Tipe Daftar</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
+                  <th className="py-3 px-4 text-right">Manual Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -243,9 +276,18 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <span className="font-mono text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded">
-                          {p.qr_token.slice(0, 8)}...
-                        </span>
+                        {p.status === 'REGISTERED' ? (
+                          <button
+                            onClick={() => handleManualCheckIn(p.id, p.full_name)}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow transition"
+                          >
+                            Check-In Manual
+                          </button>
+                        ) : (
+                          <span className="font-mono text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded">
+                            {p.qr_token.slice(0, 8)}...
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
