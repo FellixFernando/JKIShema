@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 
@@ -37,6 +37,7 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
   const [actionMsg, setActionMsg] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -63,7 +64,7 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error(err)
-    } finally {
+    } fontally {
       setLoading(false)
     }
   }, [search, statusFilter])
@@ -96,6 +97,39 @@ export default function AdminDashboardPage() {
       }
     } catch (err: any) {
       alert(`Error: ${err.message}`)
+    }
+  }
+
+  const handleExportCSV = () => {
+    window.open('/api/admin/export', '_blank')
+  }
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const text = await file.text()
+
+    try {
+      const res = await fetch('/api/admin/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/csv' },
+        body: text,
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setActionMsg(`✓ Import Berhasil! ${data.importedCount} peserta diimpor, ${data.skippedCount} duplikat dilewati.`)
+        fetchStats()
+        fetchParticipants()
+        setTimeout(() => setActionMsg(''), 5000)
+      } else {
+        alert(`Gagal Import: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`)
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -181,14 +215,37 @@ export default function AdminDashboardPage() {
 
         {/* Data Table Section */}
         <div className="bg-slate-800 border border-slate-700 rounded-3xl p-4 sm:p-6 space-y-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-white">Daftar Seluruh Peserta</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Kelola dan lihat data peserta secara real-time</p>
+              <p className="text-xs text-slate-400 mt-0.5">Kelola data, pencarian, import/export CSV</p>
             </div>
 
-            {/* Controls / Filter */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Controls / Actions / Filter */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Export Button */}
+              <button
+                onClick={handleExportCSV}
+                className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+              >
+                📥 Export CSV
+              </button>
+
+              {/* Import Button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5"
+              >
+                📤 Import CSV
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImportCSV}
+              />
+
               {/* Search Bar */}
               <input
                 type="text"
