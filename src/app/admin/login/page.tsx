@@ -27,8 +27,7 @@ export default function AdminLoginPage() {
     if (res?.error) {
       setErrorMsg('Username atau Password salah.')
     } else {
-      router.push('/admin')
-      router.refresh()
+      window.location.href = '/admin'
     }
   }
 

@@ -33,7 +33,7 @@ describe('Check-In Service', () => {
     const result = await processCheckInByToken('valid-qr-123')
 
     expect(result.resultCode).toBe('SUCCESS')
-    expect(result.participant.full_name).toBe('Budi Santoso')
+    expect(result.participant?.full_name).toBe('Budi Santoso')
     expect(db.participant.update).toHaveBeenCalledWith({
       where: { id: 'p123' },
       data: expect.objectContaining({ status: 'CHECKED_IN' }),
@@ -54,7 +54,7 @@ describe('Check-In Service', () => {
     const result = await processCheckInByToken('valid-qr-123')
 
     expect(result.resultCode).toBe('ALREADY_CHECKED_IN')
-    expect(result.participant.full_name).toBe('Budi Santoso')
+    expect(result.participant?.full_name).toBe('Budi Santoso')
     expect(db.participant.update).not.toHaveBeenCalled()
   })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 
 interface Stats {
@@ -30,7 +30,6 @@ interface Participant {
 }
 
 export default function AdminDashboardPage() {
-  const { data: session } = useSession()
   const [stats, setStats] = useState<Stats | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [search, setSearch] = useState('')
@@ -64,7 +63,7 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error(err)
-    } fontally {
+    } finally {
       setLoading(false)
     }
   }, [search, statusFilter])
