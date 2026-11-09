@@ -29,12 +29,37 @@ enum ChurchStatus {
   TIDAK_BERGEREJA
 }
 
+enum WhatsAppDeliveryStatus {
+  NOT_SENT
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  UNKNOWN
+  CANCELLED
+}
+
+enum WhatsAppAttemptStatus {
+  SUCCESS
+  FAILED
+  TIMEOUT_UNKNOWN
+}
+
+enum ReconciliationAction {
+  CONFIRMED_DELIVERED
+  CONFIRMED_UNDELIVERED_RETRY
+  ADMIN_CANCELLED
+}
+
 model User {
-  id            String   @id @default(uuid())
-  username      String   @unique
-  password_hash String
-  role          Role     @default(ADMIN)
-  created_at    DateTime @default(now())
+  id              String                      @id @default(uuid())
+  username        String                      @unique
+  password_hash   String
+  role            Role                        @default(ADMIN)
+  reconciliations WhatsAppReconciliationLog[]
+  created_at      DateTime                    @default(now())
 }
 
 model Participant {
@@ -49,9 +74,86 @@ model Participant {
   status            RegistrationStatus @default(REGISTERED)
   registration_type RegistrationType   @default(ONLINE)
   checked_in_at     DateTime?
+  wa_message_id      String?
+  wa_delivery_status WhatsAppDeliveryStatus @default(NOT_SENT)
+  wa_sent_at         DateTime?
+  wa_error_code      String?
+  wa_error_message   String?
+  wa_retry_count     Int                    @default(0)
+  wa_last_retry_at   DateTime?
+  delivery           WhatsAppDelivery?
   created_at        DateTime           @default(now())
 
   @@index([full_name, whatsapp_number])
+}
+
+model WhatsAppDelivery {
+  id                 String                 @id @default(uuid())
+  participant_id     String?                @unique
+  participant        Participant?           @relation(fields: [participant_id], references: [id], onDelete: SetNull)
+  participant_name   String
+  qr_token_snapshot  String
+  recipient_phone    String
+  status                WhatsAppDeliveryStatus @default(PENDING)
+  total_attempts        Int                    @default(0)
+  processing_started_at DateTime?
+  pending_opt_out       Boolean                @default(false)
+  created_at            DateTime               @default(now())
+  updated_at            DateTime               @updatedAt
+  sent_at               DateTime?
+  delivered_at          DateTime?
+  read_at               DateTime?
+  failed_at             DateTime?
+  unknown_at            DateTime?
+  cancelled_at          DateTime?
+  last_error_code       String?
+  last_error_message    String?
+
+  attempts              WhatsAppDeliveryAttempt[]
+  reconciliations       WhatsAppReconciliationLog[]
+
+  @@index([status])
+  @@index([recipient_phone])
+  @@index([qr_token_snapshot])
+  @@index([processing_started_at])
+}
+
+model WhatsAppDeliveryAttempt {
+  id                   String                @id @default(uuid())
+  delivery_id          String
+  delivery             WhatsAppDelivery      @relation(fields: [delivery_id], references: [id], onDelete: Restrict)
+  attempt_number       Int                   @default(1)
+  status               WhatsAppAttemptStatus
+  meta_message_id      String?               @unique
+  error_code           String?
+  error_message        String?
+  request_started_at   DateTime              @default(now())
+  response_received_at DateTime?
+  created_at           DateTime              @default(now())
+
+  @@unique([delivery_id, attempt_number])
+  @@index([delivery_id])
+  @@index([meta_message_id])
+}
+
+model WhatsAppReconciliationLog {
+  id                 String                 @id @default(uuid())
+  delivery_id        String?
+  delivery           WhatsAppDelivery?      @relation(fields: [delivery_id], references: [id], onDelete: SetNull)
+  admin_id           String?
+  admin_user         User?                  @relation(fields: [admin_id], references: [id], onDelete: SetNull)
+  participant_name   String
+  recipient_phone    String
+  admin_username     String
+  action             ReconciliationAction
+  reason             String
+  previous_status    WhatsAppDeliveryStatus
+  resulting_status   WhatsAppDeliveryStatus
+  created_at         DateTime               @default(now())
+
+  @@index([delivery_id])
+  @@index([admin_id])
+  @@index([created_at])
 }
 
 model SystemConfig {

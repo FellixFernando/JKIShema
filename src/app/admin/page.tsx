@@ -361,7 +361,7 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="py-3.5 px-4 text-slate-300 font-mono">{p.whatsapp_number}</td>
                       <td className="py-3.5 px-4 text-slate-400">
-                        {p.church_status === 'BERGEREJA' ? p.church_branch || 'Bergereja' : 'Tidak Bergereja'}
+                        {p.church_status === 'BERGEREJA' ? p.church_branch || 'Berjemaat' : 'Belum Berjemaat'}
                       </td>
                       <td className="py-3.5 px-4">
                         {p.status === 'CHECKED_IN' && (

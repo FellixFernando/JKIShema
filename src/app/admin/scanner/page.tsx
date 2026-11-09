@@ -376,8 +376,8 @@ export default function QRScannerPage() {
                   <p className="text-xs text-emerald-100">WA: {scanResult.participant.whatsapp_number}</p>
                   <p className="text-xs text-emerald-200">
                     {scanResult.participant.church_status === 'BERGEREJA'
-                      ? scanResult.participant.church_branch || 'Bergereja'
-                      : 'Tidak Bergereja'}
+                      ? scanResult.participant.church_branch || 'Berjemaat'
+                      : 'Belum Berjemaat'}
                   </p>
                 </div>
               )}

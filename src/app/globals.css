@@ -24,3 +24,127 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*Animated Blob Background*/
+
+
+@keyframes blob {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(100px, -90px) scale(1.12) rotate(8deg);
+  }
+
+  50% {
+    transform: translate(-50px, 70px) scale(0.92) rotate(-6deg);
+  }
+
+  75% {
+    transform: translate(80px, 40px) scale(1.08) rotate(4deg);
+  }
+}
+
+.animate-blob {
+  animation: blob 9s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: -3s;
+}
+
+/* Floating Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Gentle Bounce Animation for Scroll Down Arrow */
+@keyframes gentle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.animate-gentle-bounce {
+  animation: gentle-bounce 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gentle-bounce {
+    animation: none;
+  }
+}
+
+/*Animated hover border*/
+
+.animated-gradient-border {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid white;
+  border-radius: 9999px;
+  background: transparent;
+  color: white;
+}
+
+.animated-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--gradient-angle, 0deg),
+      #ffffff,
+      #2563eb,
+      #93c5fd,
+      #ffffff);
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.animated-gradient-border:hover {
+  border-color: transparent;
+}
+
+.animated-gradient-border:hover::before {
+  opacity: 1;
+  animation: gradient-spin 0.5s ease-out forwards;
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes gradient-spin {
+  from {
+    --gradient-angle: 0deg;
+  }
+
+  to {
+    --gradient-angle: 360deg;
+  }
+}
