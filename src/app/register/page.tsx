@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import TicketCard from '@/components/TicketCard'
-import { CheckCircle2, Info, ArrowLeft, Plus, Trash2, MessageCircle } from 'lucide-react'
+import { CheckCircle2, Info, ArrowLeft, Plus, Trash2, MessageCircle, HeartHandshake, ChevronRight } from 'lucide-react'
 
 interface ParticipantFormItem {
   full_name: string
@@ -174,6 +174,13 @@ export default function RegisterPage() {
 
           <div className="pt-2 flex flex-col gap-3">
             <Link
+              href="/sponsorship"
+              className="w-full text-center bg-[#F5E8EB] hover:bg-[#F5E8EB]/80 text-[#7C152D] border border-[#A43A52]/30 font-bold text-sm py-3.5 rounded-xl transition shadow-sm cursor-pointer flex items-center justify-center gap-2"
+            >
+              <HeartHandshake className="w-4 h-4" />
+              <span>Info Sponsorship &amp; Menabur</span>
+            </Link>
+            <Link
               href="/"
               className="w-full text-center bg-[#7C152D] hover:bg-[#571020] text-white font-bold text-sm py-3.5 rounded-xl transition shadow-md shadow-[#7C152D]/20 cursor-pointer"
             >
@@ -214,6 +221,32 @@ export default function RegisterPage() {
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Kembali</span>
+          </Link>
+        </div>
+
+        {/* Info Sponsorship & Menabur Button */}
+        <div>
+          <Link
+            href="/sponsorship"
+            className="w-full flex items-center justify-between gap-3 bg-[#F5E8EB] hover:bg-[#F5E8EB]/80 border border-[#A43A52]/30 text-[#7C152D] px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl transition duration-200 shadow-sm group cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-[#A43A52]/20 flex items-center justify-center shrink-0 text-[#7C152D] shadow-sm">
+                <HeartHandshake className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="text-left">
+                <span className="block text-xs sm:text-sm font-bold tracking-wide">
+                  Info Sponsorship &amp; Menabur
+                </span>
+                <span className="block text-[11px] sm:text-xs text-[#766C70]">
+                  Informasi sponsorship dan dukungan pelayanan via QRIS
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-[#7C152D] shrink-0">
+              <span className="hidden sm:inline">Lihat Info</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </div>
           </Link>
         </div>
 
@@ -405,18 +438,26 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        {/* Contact Us Redirect */}
-        <div className="pt-4 border-t border-[#A43A52]/15 text-center">
-          <p className="text-xs text-[#766C70] mb-2">Punya pertanyaan seputar acara?</p>
-          <a
-            href="https://wa.me/6281234567890?text=Halo%20Admin,%20saya%20ingin%20bertanya%20seputar%20pendaftaran%20Christmas%20Celebration"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-bold text-[#7C152D] hover:text-[#571020] bg-[#F5E8EB] hover:bg-[#F5E8EB]/80 border border-[#A43A52]/20 px-4 py-2 rounded-lg transition"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>Contact Us via WhatsApp</span>
-          </a>
+        {/* Contact Us & Sponsorship Redirect */}
+        <div className="pt-4 border-t border-[#A43A52]/15 text-center space-y-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+            <Link
+              href="/sponsorship"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-xs font-bold text-[#7C152D] hover:text-[#571020] bg-[#F5E8EB] hover:bg-[#F5E8EB]/80 border border-[#A43A52]/20 px-4 py-2.5 rounded-lg transition"
+            >
+              <HeartHandshake className="w-3.5 h-3.5" />
+              <span>Info Sponsorship &amp; Menabur</span>
+            </Link>
+            <a
+              href="https://wa.me/6281234567890?text=Halo%20Admin,%20saya%20ingin%20bertanya%20seputar%20pendaftaran%20Christmas%20Celebration"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-xs font-bold text-[#766C70] hover:text-[#292329] bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-lg transition"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-[#7C152D]" />
+              <span>Bantuan via WhatsApp</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import GallerySection from "@/components/sections/gallery/GallerySection";
 import YoutubeSection from "@/components/sections/youtube/YoutubeSection";
 import ContactSection from "@/components/sections/contact/ContactSection";
 import ChristmasPopup from "@/components/ui/ChristmasPopup";
+import AnimatedBlobBackground from "@/components/ui/AnimatedBlobBg";
 
 export const revalidate = 0;
 
@@ -32,8 +33,17 @@ export default async function HomePage() {
         <NewsSection news={mockNewsData} />
         <AboutSection />
         <JadwalIbadahSection />
-        <GallerySection />
-        <YoutubeSection />
+
+        {/* Shared section for Gallery & Youtube with floating animated gradient background */}
+        <section id="gallery" className="relative isolate overflow-hidden bg-white">
+          <AnimatedBlobBackground />
+          <div className="pointer-events-none absolute inset-0 z-0 backdrop-blur-[75px]" />
+          <div className="relative z-10">
+            <GallerySection />
+            <YoutubeSection />
+          </div>
+        </section>
+
         <ContactSection />
       </main>
 

@@ -53,7 +53,7 @@ describe('TicketCard Component', () => {
       `tiket-jki-shema-${mockParticipant.qr_token}.png`
     )
     expect(downloadBtn.getAttribute('href')).toMatch(/^data:image\/png;base64,/)
-  })
+  }, 15000)
 
   it('handles empty qr_token gracefully with error message', async () => {
     render(

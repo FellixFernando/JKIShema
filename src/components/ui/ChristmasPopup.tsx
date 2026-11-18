@@ -78,7 +78,7 @@ export default function ChristmasPopup({
 
     return (
         <div
-            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+            className={`fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
                 isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             }`}
             role="presentation"
@@ -96,7 +96,7 @@ export default function ChristmasPopup({
                 aria-modal="true"
                 aria-label="Pendaftaran Christmas Celebration JKI Shema"
                 onClick={(e) => e.stopPropagation()}
-                className={`relative z-10 w-full max-w-md sm:max-w-lg md:max-w-xl bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/20 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+                className={`relative z-10 w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/20 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
                     isOpen
                         ? "opacity-100 scale-100 translate-y-0"
                         : "opacity-0 scale-95 translate-y-4"
@@ -108,7 +108,7 @@ export default function ChristmasPopup({
                     type="button"
                     onClick={handleClose}
                     aria-label="Tutup popup pendaftaran"
-                    className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/70 hover:bg-black/90 text-white/80 hover:text-white border border-white/30 backdrop-blur-md shadow-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer group"
+                    className="absolute top-3 right-3 sm:top-5 sm:right-5 z-30 flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/70 hover:bg-black/90 text-white/80 hover:text-white border border-white/30 backdrop-blur-md shadow-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer group"
                 >
                     <X className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 group-hover:scale-110" />
                 </button>
@@ -120,14 +120,14 @@ export default function ChristmasPopup({
                         <img
                             src="/images/hero/christmas-poster-new.png"
                             alt="Christmas Celebration JKI Shema"
-                            className="w-full h-auto object-cover max-h-[60vh] sm:max-h-[68vh] block"
+                            className="w-full h-auto object-cover max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] block"
                         />
                         {/* Gradient overlay for seamless transition to button section */}
-                        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black via-black/75 to-transparent pointer-events-none" />
+                        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-36 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
                     </div>
 
                     {/* Registration Button Section */}
-                    <div className="relative -mt-10 sm:-mt-12 mb-5 sm:mb-7 z-20 flex justify-center w-full px-4">
+                    <div className="relative -mt-12 sm:-mt-16 mb-6 sm:mb-8 z-20 flex flex-col items-center justify-center w-full px-4 gap-2.5 sm:gap-3.5">
                         {isRegistrationOpen ? (
                             <div className="animate-float">
                                 <Link
@@ -141,7 +141,7 @@ export default function ChristmasPopup({
                                         hover:border-[#FF8AA3]/70
                                         text-[#9E1C3C] font-extrabold text-sm sm:text-base md:text-lg
                                         hover:text-[#ffffff]
-                                        px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-full
+                                        px-7 py-3 sm:px-9 sm:py-4 rounded-full
                                         shadow-[0_0_20px_rgba(158,28,60,0.35)]
                                         hover:shadow-[0_0_35px_rgba(158,28,60,0.7)]
                                         hover:scale-105
@@ -157,13 +157,22 @@ export default function ChristmasPopup({
                                         bg-[#9E1C3C]/20
                                         backdrop-blur-xl
                                         border border-[#9E1C3C]/40
-                                        text-white/90 font-medium text-xs sm:text-sm
-                                        px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl"
+                                        text-white/90 font-medium text-xs sm:text-sm md:text-base
+                                        px-6 py-3 sm:px-8 sm:py-3.5 rounded-xl"
                                 >
                                     🔒 Pendaftaran Saat Ini Telah Ditutup
                                 </div>
                             </div>
                         )}
+
+                        {/* Info Sponsorship Text Button */}
+                        <Link
+                            href="/sponsorship"
+                            onClick={handleClose}
+                            className="text-xs sm:text-sm md:text-base text-white hover:text-white/80 underline underline-offset-4 decoration-white/40 hover:decoration-white font-medium transition-colors duration-200 cursor-pointer"
+                        >
+                            info sponsorship
+                        </Link>
                     </div>
                 </div>
             </div>

@@ -80,26 +80,26 @@ export default function NewsCarousel({
             </div>
 
             {/* Bottom Controls Row: Agenda Button on Left, Navigation Buttons on Right */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mt-8 sm:mt-10 md:mt-12">
+            <div className="flex items-center justify-between gap-3 sm:gap-6 mt-6 sm:mt-8">
                 {/* Agenda JKI Shema Button */}
                 <button
                     type="button"
                     onClick={onOpenAgenda}
-                    className="inline-flex items-center justify-center bg-[#0B1930] hover:bg-[#162a4d] text-white font-semibold text-xs sm:text-sm tracking-wider uppercase px-8 py-3.5 sm:py-4 rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930]"
+                    className="inline-flex shrink-0 items-center justify-center bg-[#0B1930] hover:bg-[#162a4d] text-white font-semibold text-xs sm:text-sm tracking-wider uppercase px-5 py-3 sm:px-8 sm:py-4 rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930]"
                 >
                     AGENDA JKI SHEMA
                 </button>
 
-                {/* Circular Navigation Buttons (Desktop & Tablet) */}
-                <div className="flex items-center gap-3 self-end sm:self-auto">
+                {/* Circular Navigation Buttons */}
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <button
                         type="button"
                         onClick={scrollPrev}
                         disabled={!canPrev}
                         aria-label="Informasi sebelumnya"
-                        className="w-12 h-12 rounded-full bg-[#0B1930] hover:bg-[#162a4d] text-white flex items-center justify-center shadow-md transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-[#0B1930] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930] cursor-pointer"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#0B1930] hover:bg-[#162a4d] text-white flex items-center justify-center shadow-md transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-[#0B1930] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930] cursor-pointer"
                     >
-                        <ChevronLeft className="w-6 h-6" />
+                        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
 
                     <button
@@ -107,9 +107,9 @@ export default function NewsCarousel({
                         onClick={scrollNext}
                         disabled={!canNext}
                         aria-label="Informasi berikutnya"
-                        className="w-12 h-12 rounded-full bg-[#0B1930] hover:bg-[#162a4d] text-white flex items-center justify-center shadow-md transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-[#0B1930] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930] cursor-pointer"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#0B1930] hover:bg-[#162a4d] text-white flex items-center justify-center shadow-md transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-[#0B1930] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B1930] cursor-pointer"
                     >
-                        <ChevronRight className="w-6 h-6" />
+                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                 </div>
             </div>

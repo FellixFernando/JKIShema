@@ -51,7 +51,7 @@ export default function ContactSection() {
     return (
         <section
             id="contact"
-            className="w-full bg-black text-white py-16 sm:py-20 px-4 sm:px-8 lg:px-16 scroll-mt-20"
+            className="w-full bg-black text-white py-16 sm:py-20 px-4 sm:px-8 lg:px-16"
         >
             <div className="max-w-6xl mx-auto space-y-12 sm:space-y-16">
                 {/* TOP HALF: KONTAK UTAMA & MAP PREVIEW */}

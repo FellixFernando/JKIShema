@@ -44,6 +44,7 @@ describe('ChristmasPopup Component', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument()
         expect(screen.getByAltText(/Christmas Celebration JKI Shema/i)).toBeInTheDocument()
         expect(screen.getByText(/Daftar Sekarang!/i)).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: /info sponsorship/i })).toHaveAttribute('href', '/sponsorship')
         expect(document.body.style.overflow).toBe('hidden')
     })
 

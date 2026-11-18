@@ -122,7 +122,7 @@ export default function JadwalIbadahSection() {
         <section
             id="ibadah"
             ref={sectionRef}
-            className="relative min-h-screen w-full bg-black py-16 sm:py-32 px-4 sm:px-8 lg:px-16 overflow-hidden flex items-center justify-center text-white scroll-mt-20"
+            className="relative min-h-screen w-full bg-black py-16 sm:py-32 px-4 sm:px-8 lg:px-16 overflow-hidden flex items-center justify-center text-white"
         >
             <span id="services" className="sr-only" />
             {/* 2 LAPISAN ECLIPSE MENGGUNAKAN ELLIPSE-1.PNG & ELLIPSE-2.PNG */}

@@ -3,9 +3,9 @@ export default function YoutubeSection() {
     const videoId = "bnB30kWxj5s";
 
     return (
-        <section className="w-full px-4 py-16 sm:px-8">
+        <div className="w-full px-4 pt-4 pb-20 sm:pb-28 sm:px-8">
             <div className="mx-auto max-w-5xl">
-                <div className="overflow-hidden rounded-2xl border border-white/20 shadow-xl">
+                <div className="overflow-hidden rounded-2xl border border-white/40 shadow-2xl backdrop-blur-sm">
                     <div className="aspect-video w-full">
                         <iframe
                             src={`https://www.youtube.com/embed/${videoId}`}
@@ -18,6 +18,6 @@ export default function YoutubeSection() {
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
     );
 }

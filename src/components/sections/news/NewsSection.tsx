@@ -40,13 +40,13 @@ export default function NewsSection({ news = mockNewsData }: NewsSectionProps) {
         <section
             id="news"
             ref={sectionRef}
-            className="relative w-full bg-white min-h-screen min-h-[100dvh] flex flex-col justify-center py-12 sm:py-16 md:py-20 lg:py-24 overflow-hidden"
+            className="relative w-full bg-white py-10 sm:py-14 md:py-16 lg:py-20 overflow-hidden"
             aria-labelledby="news-section-heading"
         >
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-auto">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Section Header: Title and Subtitle */}
                 <div
-                    className={`mb-8 sm:mb-10 md:mb-12 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+                    className={`mb-6 sm:mb-8 md:mb-10 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
                         isVisible
                             ? "opacity-100 translate-y-0"
                             : "opacity-0 translate-y-6"
