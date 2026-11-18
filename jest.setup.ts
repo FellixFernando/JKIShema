@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
 
+// Explicitly default WhatsApp service to mock mode in test environment
+process.env.WHATSAPP_MOCK_MODE = process.env.WHATSAPP_MOCK_MODE || 'true'
+
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder
 }
@@ -8,17 +11,35 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder as any
 }
 
+if (typeof global.ReadableStream === 'undefined') {
+  try {
+    const { ReadableStream } = require('stream/web')
+    global.ReadableStream = ReadableStream
+  } catch {}
+}
+
 if (typeof global.Request === 'undefined') {
   class MockRequest {
     url: string
     method: string
     body: any
-    headers: Map<string, string>
+    headers: any
     constructor(input: any, init?: any) {
       this.url = typeof input === 'string' ? input : input?.url || 'http://localhost'
       this.method = init?.method || 'GET'
       this.body = init?.body
-      this.headers = new Map(Object.entries(init?.headers || {}))
+      const rawHeaders: [any, any][] = init?.headers instanceof Map
+        ? Array.from(init.headers.entries())
+        : init?.headers && typeof init.headers.entries === 'function'
+          ? Array.from(init.headers.entries())
+          : Object.entries(init?.headers || {})
+      const headerEntries: [string, string][] = rawHeaders.map(([k, v]) => [String(k).toLowerCase(), String(v)])
+      const headerMap = new Map<string, string>(headerEntries)
+      this.headers = {
+        get: (name: string) => headerMap.get(name.toLowerCase()) || null,
+        set: (name: string, value: string) => headerMap.set(name.toLowerCase(), value),
+        has: (name: string) => headerMap.has(name.toLowerCase()),
+      }
     }
     async json() {
       return typeof this.body === 'string' ? JSON.parse(this.body) : this.body
@@ -34,11 +55,22 @@ if (typeof global.Response === 'undefined') {
   class MockResponse {
     body: any
     status: number
-    headers: Map<string, string>
+    headers: any
     constructor(body?: any, init?: any) {
       this.body = body
       this.status = init?.status || 200
-      this.headers = new Map(Object.entries(init?.headers || {}))
+      const rawHeaders: [any, any][] = init?.headers instanceof Map
+        ? Array.from(init.headers.entries())
+        : init?.headers && typeof init.headers.entries === 'function'
+          ? Array.from(init.headers.entries())
+          : Object.entries(init?.headers || {})
+      const headerEntries: [string, string][] = rawHeaders.map(([k, v]) => [String(k).toLowerCase(), String(v)])
+      const headerMap = new Map<string, string>(headerEntries)
+      this.headers = {
+        get: (name: string) => headerMap.get(name.toLowerCase()) || null,
+        set: (name: string, value: string) => headerMap.set(name.toLowerCase(), value),
+        has: (name: string) => headerMap.has(name.toLowerCase()),
+      }
     }
     async json() {
       return typeof this.body === 'string' ? JSON.parse(this.body) : this.body

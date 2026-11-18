@@ -13,6 +13,29 @@ enum Role {
   ADMIN
 }
 
+enum WebhookBatchStatus {
+  RECEIVED
+  PROCESSED
+  PARTIALLY_FAILED
+  FAILED
+}
+
+enum WebhookEventProcessingState {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  UNMATCHED
+  IGNORED
+  FAILED
+  RETRY
+}
+
+enum WebhookEventType {
+  STATUS_UPDATE
+  INBOUND_MESSAGE
+  UNSUPPORTED
+}
+
 enum RegistrationStatus {
   REGISTERED
   CHECKED_IN
@@ -131,6 +154,8 @@ model WhatsAppDeliveryAttempt {
   response_received_at DateTime?
   created_at           DateTime              @default(now())
 
+  webhook_events       WhatsAppWebhookEvent[]
+
   @@unique([delivery_id, attempt_number])
   @@index([delivery_id])
   @@index([meta_message_id])
@@ -159,4 +184,51 @@ model WhatsAppReconciliationLog {
 model SystemConfig {
   key   String @id
   value String
+}
+
+model WhatsAppWebhookBatch {
+  id           String             @id @default(uuid())
+  payload_hash String             @unique
+  raw_payload  Json
+  status       WebhookBatchStatus @default(RECEIVED)
+  events_count Int                @default(0)
+  created_at   DateTime           @default(now())
+  processed_at DateTime?
+
+  events       WhatsAppWebhookEvent[]
+
+  @@index([created_at])
+  @@index([status])
+}
+
+model WhatsAppWebhookEvent {
+  id               String                      @id @default(uuid())
+  batch_id         String?
+  batch            WhatsAppWebhookBatch?       @relation(fields: [batch_id], references: [id], onDelete: SetNull)
+  attempt_id       String?
+  attempt          WhatsAppDeliveryAttempt?    @relation(fields: [attempt_id], references: [id], onDelete: SetNull)
+  event_identity   String                      @unique
+  event_type       WebhookEventType
+  meta_message_id  String?
+  event_status     String?
+  meta_timestamp   DateTime?
+  recipient_phone  String?
+  error_code       String?
+  error_message    String?
+  raw_event        Json?
+  processing_state WebhookEventProcessingState @default(RECEIVED)
+  claim_token      String?
+  claimed_at       DateTime?
+  claim_expires_at DateTime?
+  retry_count      Int                         @default(0)
+  next_retry_at    DateTime?
+  failure_reason   String?
+  created_at       DateTime                    @default(now())
+  processed_at     DateTime?
+
+  @@index([attempt_id])
+  @@index([processing_state, next_retry_at])
+  @@index([meta_message_id])
+  @@index([claim_expires_at])
+  @@index([batch_id])
 }

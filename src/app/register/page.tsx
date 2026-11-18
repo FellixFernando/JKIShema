@@ -149,6 +149,23 @@ export default function RegisterPage() {
             </p>
           </div>
 
+          {/* WhatsApp delivery notice */}
+          {successData.some((item) => item.wa_delivery_status === 'FAILED') ? (
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <span>
+                Pengiriman tiket via WhatsApp sedang mengalami gangguan jaringan. Jangan khawatir, tiket Anda tetap sah dan terdaftar. Silakan simpan atau unduh QR Code di bawah ini.
+              </span>
+            </div>
+          ) : (
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-2.5">
+              <MessageCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+              <span>
+                Tiket QR juga dikirimkan melalui WhatsApp ke nomor terdaftar. Anda juga dapat langsung mengunduh tiket di halaman ini.
+              </span>
+            </div>
+          )}
+
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
             {successData.map((item, idx) => (
               <TicketCard key={item.id || item.qr_token || idx} participant={item} />

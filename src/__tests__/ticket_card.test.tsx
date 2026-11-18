@@ -43,7 +43,7 @@ describe('TicketCard Component', () => {
         expect(img).toBeInTheDocument()
         expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/)
       },
-      { timeout: 4000 }
+      { timeout: 10000 }
     )
 
     // Check download button

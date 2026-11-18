@@ -1,18 +1,24 @@
 import { registerParticipant } from '@/services/registration.service'
 import { db } from '@/lib/db'
 
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const mockDb: any = {
     participant: {
       findFirst: jest.fn(),
       create: jest.fn(),
       count: jest.fn(),
     },
+    whatsAppDelivery: {
+      create: jest.fn().mockResolvedValue({ id: 'mock-del-id' }),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     systemConfig: {
       findUnique: jest.fn(),
     },
-  },
-}))
+    $transaction: jest.fn((cb) => (typeof cb === 'function' ? cb(mockDb) : Promise.all(cb))),
+  }
+  return { db: mockDb }
+})
 
 describe('Registration Service (Single Participant)', () => {
   beforeEach(() => {
@@ -65,7 +71,7 @@ describe('Registration Service (Single Participant)', () => {
     expect(db.participant.findFirst).toHaveBeenCalledWith({
       where: {
         full_name: 'Budi Santoso',
-        whatsapp_number: '08123456789',
+        whatsapp_number: { in: ['628123456789', '08123456789'] },
         status: { in: ['REGISTERED', 'CHECKED_IN'] },
       },
     })

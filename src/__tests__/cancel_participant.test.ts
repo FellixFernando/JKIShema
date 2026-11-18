@@ -5,8 +5,8 @@ import { PATCH as participantsPatch } from '@/app/api/admin/participants/route'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const mockDb: any = {
     participant: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -14,11 +14,17 @@ jest.mock('@/lib/db', () => ({
       count: jest.fn(),
       create: jest.fn(),
     },
+    whatsAppDelivery: {
+      create: jest.fn().mockResolvedValue({ id: 'mock-del-id' }),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     systemConfig: {
       findUnique: jest.fn(),
     },
-  },
-}))
+    $transaction: jest.fn((callback) => (typeof callback === 'function' ? callback(mockDb) : Promise.all(callback))),
+  }
+  return { db: mockDb }
+})
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

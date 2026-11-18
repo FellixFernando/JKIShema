@@ -1,20 +1,25 @@
 import { registerBatchParticipants } from '@/services/registration.service'
 import { db } from '@/lib/db'
 
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const mockDb: any = {
     participant: {
       findFirst: jest.fn(),
       create: jest.fn(),
       createMany: jest.fn(),
       count: jest.fn(),
     },
+    whatsAppDelivery: {
+      create: jest.fn().mockResolvedValue({ id: 'mock-del-id' }),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     systemConfig: {
       findUnique: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(db)),
-  },
-}))
+    $transaction: jest.fn((callback) => callback(mockDb)),
+  }
+  return { db: mockDb }
+})
 
 describe('Group Registration Service (Multi-Participant)', () => {
   beforeEach(() => {
@@ -52,8 +57,8 @@ describe('Group Registration Service (Multi-Participant)', () => {
     ])
 
     expect(results).toHaveLength(2)
-    expect(results[0].whatsapp_number).toBe(primaryWA)
-    expect(results[1].whatsapp_number).toBe(primaryWA)
+    expect(results[0].whatsapp_number).toBe('6281299998888')
+    expect(results[1].whatsapp_number).toBe('6281299998888')
     expect(results[1].is_child).toBe(true)
     expect(results[0].qr_token).not.toEqual(results[1].qr_token)
   })
