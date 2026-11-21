@@ -47,15 +47,19 @@ NEXTAUTH_SECRET="rahasia_gereja_christmas_123"
 ```
 
 ### 4. Sinkronisasi Database & Generate Prisma Client
-Jalankan perintah berikut untuk membuat tabel ke Supabase dan meng-generate Prisma Client:
+Jalankan migrasi yang sudah ada di `prisma/migrations` lalu generate Prisma Client:
 
 ```bash
-# Generate Prisma Client
-npx prisma generate
+# Terapkan seluruh migrasi ke database
+npx prisma migrate deploy
 
-# Push skema tabel ke Supabase
-npx prisma db push
+# Generate Prisma Client (juga otomatis berjalan saat npm install)
+npx prisma generate
 ```
+
+Saat membuat migrasi baru di database lokal, gunakan `npx prisma migrate dev --name <nama_migrasi>`.
+Jangan gunakan `npx prisma db push` pada database bersama: perintah itu tidak mencatat riwayat migrasi
+dan menyebabkan skema database berbeda dari `prisma/migrations`.
 
 ### 5. Buat Akun Master Admin Pertama (Seeding)
 Jalankan seeder untuk mengisi akun Master Admin default:

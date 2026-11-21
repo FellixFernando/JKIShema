@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "postinstall": "prisma skills sync || exit 0"
+    "postinstall": "prisma generate && (prisma skills sync || exit 0)"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
