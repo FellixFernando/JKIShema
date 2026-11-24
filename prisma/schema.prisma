@@ -148,6 +148,8 @@ model WhatsAppDeliveryAttempt {
   attempt_number       Int                   @default(1)
   status               WhatsAppAttemptStatus
   meta_message_id      String?               @unique
+  admin_username       String?
+  resend_reason        String?
   error_code           String?
   error_message        String?
   request_started_at   DateTime              @default(now())

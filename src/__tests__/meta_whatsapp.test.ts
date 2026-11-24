@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 import {
   uploadWhatsAppMedia,
   sendWhatsAppTemplate,
@@ -119,7 +120,7 @@ describe('Meta WhatsApp Cloud API Client & Services (Phase 3B)', () => {
       })
 
       expect(result.outcome).toBe('MEDIA_UPLOAD_SUCCESS')
-      expect(result.mediaId).toBeUndefined()
+      expect(result.mediaId).toMatch(/^mock_media_/)
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
@@ -405,15 +406,20 @@ describe('Meta WhatsApp Cloud API Client & Services (Phase 3B)', () => {
       expect(res.timestamp).toBeDefined()
     })
 
-    it('prepareTicketQrMediaForWhatsApp generates valid PNG buffer', async () => {
+    it('prepareTicketQrMediaForWhatsApp generates valid PNG buffer composited with Canva frame', async () => {
       const media = await prepareTicketQrMediaForWhatsApp('my-ticket-token-uuid')
       expect(media.filename).toContain('my-ticket-token-uuid')
       expect(media.mimeType).toBe('image/png')
       expect(Buffer.isBuffer(media.buffer)).toBe(true)
       expect(media.buffer.length).toBeGreaterThan(0)
+
+      const metadata = await sharp(media.buffer).metadata()
+      expect(metadata.width).toBe(1024)
+      expect(metadata.height).toBe(768)
+      expect(metadata.format).toBe('png')
     })
 
-    it('sendWhatsAppTicketQr returns backward-compatible result with media metadata in mock mode', async () => {
+    it('sendWhatsAppTicketQr returns backward-compatible result with framed media metadata in mock mode', async () => {
       const res = await sendWhatsAppTicketQr('081234567890', 'Tiffany', 'my-ticket-token-uuid')
       expect(res.success).toBe(true)
       expect(res.to).toBe('081234567890')
@@ -423,6 +429,12 @@ describe('Meta WhatsApp Cloud API Client & Services (Phase 3B)', () => {
       expect(res.media?.mimeType).toBe('image/png')
       expect(res.media?.sizeBytes).toBeGreaterThan(0)
       expect(res.outcome).toBe('MOCK_SUCCESS')
+      expect(res.media?.buffer).toBeDefined()
+
+      const metadata = await sharp(res.media!.buffer!).metadata()
+      expect(metadata.width).toBe(1024)
+      expect(metadata.height).toBe(768)
+      expect(metadata.format).toBe('png')
     })
   })
 })

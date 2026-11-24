@@ -52,21 +52,19 @@ describe('NewsSection Component', () => {
             screen.getByText('Bersama melayani dan membimbing jemaat dalam kasih dan iman.')
         ).toBeInTheDocument()
 
-        // Check cards
-        expect(screen.getByText('SHEMA FAMILY CAMP 2026')).toBeInTheDocument()
-        expect(screen.getByText('KKR JKI SHEMA 2026 : KEBANGKITAN ROHANI')).toBeInTheDocument()
-        expect(screen.getByText('SHEMA CHRISTMAS CONCERT 2026')).toBeInTheDocument()
+        // Check that all mock news items are rendered
+        mockNewsData.forEach((item) => {
+            expect(screen.getByText(item.title)).toBeInTheDocument()
+        })
 
-        // Check badges
-        expect(screen.getAllByText('ACARA').length).toBeGreaterThan(0)
-        expect(screen.getAllByText('BERITA').length).toBeGreaterThan(0)
-        expect(screen.getAllByText('PELAYANAN').length).toBeGreaterThan(0)
+        // Check category badges are rendered for all mock items
+        expect(screen.getAllByText('ACARA').length).toBe(mockNewsData.length)
     })
 
     it('opens NewsDetailModal when a news card is clicked', () => {
         render(<NewsSection news={mockNewsData} />)
 
-        const firstCard = screen.getByText('SHEMA FAMILY CAMP 2026')
+        const firstCard = screen.getByText(mockNewsData[0].title)
         fireEvent.click(firstCard)
 
         // Modal should open
@@ -79,7 +77,7 @@ describe('NewsSection Component', () => {
     it('closes NewsDetailModal when close button is clicked', () => {
         render(<NewsSection news={mockNewsData} />)
 
-        const firstCard = screen.getByText('SHEMA FAMILY CAMP 2026')
+        const firstCard = screen.getByText(mockNewsData[0].title)
         fireEvent.click(firstCard)
 
         const closeBtn = screen.getByRole('button', { name: /Tutup detail informasi/i })

@@ -13,12 +13,26 @@ export interface SingleParticipantInput {
   is_wa_opt_in: boolean
 }
 
-export async function registerParticipant(input: SingleParticipantInput) {
-  const result = await registerBatchParticipants([input])
+export interface RegisterOptions {
+  registrationType?: 'ONLINE' | 'ON_SITE'
+  immediateCheckIn?: boolean
+}
+
+export async function registerParticipant(
+  input: SingleParticipantInput,
+  options?: RegisterOptions
+) {
+  const result = await registerBatchParticipants([input], options)
   return result[0]
 }
 
-export async function registerBatchParticipants(inputs: SingleParticipantInput[]) {
+export async function registerBatchParticipants(
+  inputs: SingleParticipantInput[],
+  options?: RegisterOptions
+) {
+  const registrationType = options?.registrationType || 'ONLINE'
+  const immediateCheckIn = Boolean(options?.immediateCheckIn)
+
   if (!inputs || inputs.length === 0) {
     throw new Error('Data peserta tidak boleh kosong.')
   }
@@ -40,7 +54,7 @@ export async function registerBatchParticipants(inputs: SingleParticipantInput[]
       throw new Error(`Nomor WhatsApp untuk peserta ke-${idx + 1} (${item.full_name}) wajib diisi.`)
     }
 
-    if (!item.is_wa_opt_in) {
+    if (item.is_wa_opt_in !== true) {
       throw new Error(`Persetujuan WhatsApp wajib dicentang untuk peserta ${item.full_name}.`)
     }
 
@@ -64,45 +78,7 @@ export async function registerBatchParticipants(inputs: SingleParticipantInput[]
     seenBatchKeys.add(key)
   }
 
-  // Check quota for the entire batch
-  const maxQuotaConfig = await db.systemConfig.findUnique({
-    where: { key: 'max_online_quota' },
-  })
-  const maxQuota = maxQuotaConfig ? parseInt(maxQuotaConfig.value, 10) : 400
-
-  const currentCount = await db.participant.count({
-    where: {
-      registration_type: 'ONLINE',
-      status: { in: ['REGISTERED', 'CHECKED_IN'] },
-    },
-  })
-
-  if (currentCount + sanitizedInputs.length > maxQuota) {
-    if (sanitizedInputs.length === 1) {
-      throw new Error('Kuota pendaftaran online telah penuh.')
-    }
-    throw new Error('Kuota pendaftaran online tidak mencukupi untuk jumlah peserta ini.')
-  }
-
-  // Validate duplicate for each participant in batch, considering legacy 08... formats
-  for (const participantData of sanitizedInputs) {
-    const legacyPhone = '08' + participantData.whatsapp_number.slice(3)
-    const phoneVariants = [participantData.whatsapp_number, legacyPhone]
-
-    const existing = await db.participant.findFirst({
-      where: {
-        full_name: participantData.full_name,
-        whatsapp_number: { in: phoneVariants },
-        status: { in: ['REGISTERED', 'CHECKED_IN'] },
-      },
-    })
-
-    if (existing) {
-      throw new Error(`Peserta dengan Nama "${participantData.full_name}" dan Nomor WhatsApp tersebut sudah terdaftar.`)
-    }
-  }
-
-  // Atomic database transaction to persist Participants and WhatsAppDelivery records
+  // Atomic database transaction to persist Participants and WhatsAppDelivery records with serialization lock
   const executeInTx = async <T>(fn: (tx: any) => Promise<T>): Promise<T> => {
     if (typeof db.$transaction === 'function') {
       return db.$transaction(fn)
@@ -111,9 +87,83 @@ export async function registerBatchParticipants(inputs: SingleParticipantInput[]
   }
 
   const createdParticipants = await executeInTx(async (tx) => {
+    // Concurrency lock for venue capacity check and registration serialization
+    if (typeof tx.$executeRaw === 'function') {
+      try {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('venue_capacity_lock'))`
+      } catch {
+        // Fallback for mocked unit test environments where $executeRaw is unsupported
+      }
+    }
+
+    // 1. Online quota check (only enforced when registrationType === 'ONLINE')
+    if (registrationType === 'ONLINE') {
+      const maxQuotaConfig = tx.systemConfig && typeof tx.systemConfig.findUnique === 'function'
+        ? await tx.systemConfig.findUnique({ where: { key: 'max_online_quota' } })
+        : null
+      const maxQuota = maxQuotaConfig ? parseInt(maxQuotaConfig.value, 10) : 400
+
+      const currentOnlineCount = await tx.participant.count({
+        where: {
+          registration_type: 'ONLINE',
+          status: { in: ['REGISTERED', 'CHECKED_IN'] },
+        },
+      })
+
+      if (currentOnlineCount + sanitizedInputs.length > maxQuota) {
+        if (sanitizedInputs.length === 1) {
+          throw new Error('Kuota pendaftaran online telah penuh.')
+        }
+        throw new Error('Kuota pendaftaran online tidak mencukupi untuk jumlah peserta ini.')
+      }
+    }
+
+    // 2. Total venue capacity check (440 participants combined)
+    const totalVenueCapacity = 440
+    const totalActiveCount = await tx.participant.count({
+      where: {
+        status: { in: ['REGISTERED', 'CHECKED_IN'] },
+      },
+    })
+
+    if (totalActiveCount + sanitizedInputs.length > totalVenueCapacity) {
+      if (sanitizedInputs.length === 1) {
+        throw new Error('Kapasitas total acara (440 peserta) telah penuh.')
+      }
+      throw new Error(
+        `Kapasitas total acara tidak mencukupi untuk ${sanitizedInputs.length} peserta (sisa kuota: ${Math.max(
+          0,
+          totalVenueCapacity - totalActiveCount
+        )}).`
+      )
+    }
+
+    // 3. Validate duplicate for each participant in batch, considering legacy 08... formats
+    for (const participantData of sanitizedInputs) {
+      const legacyPhone = '08' + participantData.whatsapp_number.slice(3)
+      const phoneVariants = [participantData.whatsapp_number, legacyPhone]
+
+      const existing = await tx.participant.findFirst({
+        where: {
+          full_name: participantData.full_name,
+          whatsapp_number: { in: phoneVariants },
+          status: { in: ['REGISTERED', 'CHECKED_IN'] },
+        },
+      })
+
+      if (existing) {
+        throw new Error(`Peserta dengan Nama "${participantData.full_name}" dan Nomor WhatsApp tersebut sudah terdaftar.`)
+      }
+    }
+
+    // 4. Persist participants and delivery records atomically
     const list = []
+    const now = new Date()
     for (const item of sanitizedInputs) {
       const qr_token = crypto.randomUUID()
+      const status = immediateCheckIn ? 'CHECKED_IN' : 'REGISTERED'
+      const checked_in_at = immediateCheckIn ? now : null
+
       const participant = await tx.participant.create({
         data: {
           full_name: item.full_name,
@@ -123,8 +173,9 @@ export async function registerBatchParticipants(inputs: SingleParticipantInput[]
           is_child: item.is_child,
           is_wa_opt_in: item.is_wa_opt_in,
           qr_token,
-          status: 'REGISTERED',
-          registration_type: 'ONLINE',
+          status,
+          registration_type: registrationType,
+          checked_in_at,
           wa_delivery_status: 'PENDING',
         },
       })

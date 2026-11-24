@@ -1,16 +1,20 @@
 import { processRSVPWebhook, exportParticipantsToCSV, importParticipantsFromCSV } from '@/services/advanced.service'
 import { db } from '@/lib/db'
 
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const mockDb: any = {
     participant: {
       findFirst: jest.fn(),
       update: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
+      count: jest.fn(),
     },
-  },
-}))
+    $executeRaw: jest.fn().mockResolvedValue(1),
+    $transaction: jest.fn((callback) => callback(mockDb)),
+  }
+  return { db: mockDb }
+})
 
 describe('Advanced Admin Tools & RSVP Webhook', () => {
   beforeEach(() => {
@@ -76,5 +80,33 @@ describe('Advanced Admin Tools & RSVP Webhook', () => {
 
     expect(csv).toContain('Nama Lengkap,Nomor WhatsApp')
     expect(csv).toContain('"Budi Santoso","08123456789"')
+  })
+
+  it('should import valid CSV participants successfully', async () => {
+    ;(db.participant.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(db.participant.count as jest.Mock).mockResolvedValue(100)
+    ;(db.participant.create as jest.Mock).mockResolvedValue({ id: 'p1' })
+
+    const csv = `Nama Lengkap,Nomor WhatsApp,Status Bergereja,Cabang,Anak
+Budi Santoso,08123456789,BERGEREJA,Pusat,Tidak
+Dewi Lestari,08129999888,TIDAK_BERGEREJA,,Tidak`
+
+    const result = await importParticipantsFromCSV(csv)
+    expect(result.importedCount).toBe(2)
+    expect(result.skippedCount).toBe(0)
+    expect(db.participant.create).toHaveBeenCalledTimes(2)
+  })
+
+  it('should skip duplicate rows in CSV import', async () => {
+    ;(db.participant.findFirst as jest.Mock).mockResolvedValueOnce({ id: 'p-existing' })
+    ;(db.participant.count as jest.Mock).mockResolvedValue(100)
+
+    const csv = `Nama Lengkap,Nomor WhatsApp,Status Bergereja,Cabang,Anak
+Budi Santoso,08123456789,BERGEREJA,Pusat,Tidak`
+
+    const result = await importParticipantsFromCSV(csv)
+    expect(result.importedCount).toBe(0)
+    expect(result.skippedCount).toBe(1)
+    expect(db.participant.create).not.toHaveBeenCalled()
   })
 })

@@ -134,6 +134,14 @@ export function evaluateDeliveryStatusTransition(
     if (incomingUpper === 'SENT' && (currentStatus === 'DELIVERED' || currentStatus === 'FAILED')) {
       return { shouldUpdate: false, isIgnored: true, reason: 'CANNOT_REGRESS_TO_SENT' }
     }
+    // Delivered can never overwrite terminal READ
+    if (incomingUpper === 'DELIVERED' && currentStatus === 'READ') {
+      return { shouldUpdate: false, isIgnored: true, reason: 'READ_IS_TERMINAL' }
+    }
+    // Failure cannot overwrite terminal READ
+    if (incomingUpper === 'FAILED' && currentStatus === 'READ') {
+      return { shouldUpdate: false, isIgnored: true, reason: 'READ_IS_TERMINAL' }
+    }
     // Delivered or Read can supersede previous state
     return { shouldUpdate: true, isIgnored: false, resultingStatus: incomingUpper }
   }
@@ -601,6 +609,23 @@ async function processClaimedEvent(event: any): Promise<{
         attempt.id
       )
       return { action: fenced ? 'PROCESSED' : 'LEASE_EXPIRED' }
+    }
+
+    // Condition 3 Guard: FAILED -> DELIVERED / READ requires eligible previous failure category
+    // Permanent recipient (131026, 100) or config/template errors (CONFIG_ERROR, 2388001, 132000) are ineligible
+    if (delivery.status === 'FAILED' && (event.event_status === 'delivered' || event.event_status === 'read')) {
+      const lastErr = attempt.error_code || delivery.last_error_code || ''
+      const permanentErrors = ['131026', '100', 'CONFIG_ERROR', '2388001', '132000']
+      if (permanentErrors.includes(lastErr)) {
+        const fenced = await completeEventWithFencing(
+          event.id,
+          event.claim_token,
+          'IGNORED',
+          `INELIGIBLE_PREVIOUS_FAILURE_CATEGORY: ${lastErr}`,
+          attempt.id
+        )
+        return { action: fenced ? 'IGNORED' : 'LEASE_EXPIRED' }
+      }
     }
 
     // Latest attempt: evaluate status transition
