@@ -1,27 +1,49 @@
 import Link from "next/link";
+import Image from "next/image";
+import { mockGalleryItems, GalleryItem } from "./gallery.mock";
 
-export default function GallerySection() {
-    const items = [1, 2, 3, 4, 5];
+export default function GallerySection({
+    items = mockGalleryItems,
+}: {
+    items?: GalleryItem[];
+}) {
+    const featuredItem = items[0];
+    const gridItems = items.slice(1, 5);
 
     return (
         <div className="pt-16 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto space-y-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                    {items.slice(0, 1).map((item) => (
+                    {/* Featured Large Image (Item 1) */}
+                    {featuredItem && (
                         <div
-                            key={item}
-                            className="col-span-2 row-span-2 aspect-square md:aspect-auto md:min-h-[424px] bg-slate-200/80 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-medium text-xs shadow-sm"
+                            key={featuredItem.id}
+                            className="group relative col-span-2 row-span-2 aspect-square md:aspect-auto md:min-h-[424px] bg-slate-200/80 backdrop-blur-sm rounded-2xl overflow-hidden shadow-sm"
                         >
-                            Dokumentasi Kegiatan {item}
+                            <Image
+                                src={featuredItem.src}
+                                alt={featuredItem.alt}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 50vw"
+                                priority
+                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+                            />
                         </div>
-                    ))}
+                    )}
 
-                    {items.slice(1, 5).map((item) => (
+                    {/* 4 Grid Images (Items 2-5) */}
+                    {gridItems.map((item) => (
                         <div
-                            key={item}
-                            className="aspect-square bg-slate-200/80 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 font-medium text-xs shadow-sm"
+                            key={item.id}
+                            className="group relative aspect-square bg-slate-200/80 backdrop-blur-sm rounded-2xl overflow-hidden shadow-sm"
                         >
-                            Dokumentasi Kegiatan {item}
+                            <Image
+                                src={item.src}
+                                alt={item.alt}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:transform-none"
+                            />
                         </div>
                     ))}
                 </div>

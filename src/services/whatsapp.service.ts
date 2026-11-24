@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { generateTicketQrBuffer } from './qrcode.service'
+import { generateFramedTicketQrBuffer } from './ticket-frame.service'
 import {
   DispatchOutcome,
   MetaApiError,
@@ -77,15 +77,15 @@ export async function sendWhatsAppMessage(
 }
 
 /**
- * Reusable utility preparing WhatsApp Cloud API delivery of the ticket QR code.
+ * Reusable utility preparing WhatsApp Cloud API delivery of the framed ticket QR code.
  *
- * Generates an in-memory PNG buffer of the QR code using the same canonical
- * ticket token payload used by the success screen and scanner.
+ * Generates an in-memory PNG buffer of the framed Christmas concert ticket (1024 x 768)
+ * using the canonical participant QR token payload composited into the Canva frame.
  */
 export async function prepareTicketQrMediaForWhatsApp(
   qrToken: string
 ): Promise<{ filename: string; mimeType: string; buffer: Buffer }> {
-  const buffer = await generateTicketQrBuffer(qrToken)
+  const buffer = await generateFramedTicketQrBuffer(qrToken)
   return {
     filename: `tiket-jki-shema-${qrToken.trim()}.png`,
     mimeType: 'image/png',
@@ -205,7 +205,108 @@ export async function deliverParticipantTicket(
   }
 
   if (config.mockMode) {
-    // Section 2.D: Mock mode isolation
+    // E2E Simulation Hooks (offline only, zero network requests)
+    if (
+      process.env.WHATSAPP_SIMULATE_DISPATCH_FAILURE === 'true' ||
+      process.env.WHATSAPP_MOCK_DISPATCH_OUTCOME === 'FAILED'
+    ) {
+      const errMsg = 'Simulated registration dispatch failure for E2E testing'
+      const now = new Date()
+
+      let claimAcquired = false
+      try {
+        await db.$transaction(async (tx: any) => {
+          const claimResult = await tx.whatsAppDelivery.updateMany({
+            where: { id: delivery.id, status: 'PENDING' },
+            data: {
+              status: 'FAILED',
+              failed_at: now,
+              last_error_code: 'SIMULATED_FAILURE',
+              last_error_message: errMsg,
+              total_attempts: { increment: 1 },
+            },
+          })
+
+          if (!claimResult || claimResult.count !== 1) {
+            throw new Error('SIMULATED_DISPATCH_CLAIM_FAILED')
+          }
+
+          claimAcquired = true
+
+          await tx.whatsAppDeliveryAttempt.create({
+            data: {
+              delivery_id: delivery.id,
+              attempt_number: 1,
+              status: 'FAILED',
+              error_code: 'SIMULATED_FAILURE',
+              error_message: errMsg,
+              request_started_at: now,
+              response_received_at: now,
+            },
+          })
+
+          if (participantId && tx.participant?.update) {
+            await tx.participant.update({
+              where: { id: participantId },
+              data: {
+                wa_delivery_status: 'FAILED',
+                wa_error_code: 'SIMULATED_FAILURE',
+                wa_error_message: errMsg,
+              },
+            })
+          }
+        })
+      } catch (txErr: any) {
+        if (txErr?.message === 'SIMULATED_DISPATCH_CLAIM_FAILED' || !claimAcquired) {
+          return {
+            success: false,
+            outcome: 'DISPATCH_REJECTED',
+            error: 'Delivery is no longer in PENDING status or was claimed by another operation.',
+          }
+        }
+        return {
+          success: false,
+          outcome: 'DISPATCH_REJECTED',
+          error: `Simulated dispatch transaction failed: ${txErr?.message || 'Transaction error'}`,
+        }
+      }
+
+      return { success: false, outcome: 'DISPATCH_REJECTED', error: errMsg }
+    }
+
+    if (process.env.WHATSAPP_MOCK_DISPATCH_OUTCOME === 'SENT') {
+      const mockWamid = `wamid.mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      await db.$transaction(async (tx) => {
+        await tx.whatsAppDelivery.updateMany({
+          where: { id: delivery.id, status: 'PENDING' },
+          data: {
+            status: 'SENT',
+            sent_at: new Date(),
+            total_attempts: { increment: 1 },
+          },
+        })
+        await tx.whatsAppDeliveryAttempt.create({
+          data: {
+            delivery_id: delivery.id,
+            attempt_number: 1,
+            status: 'SUCCESS',
+            meta_message_id: mockWamid,
+            request_started_at: new Date(),
+            response_received_at: new Date(),
+          },
+        })
+        await tx.participant.update({
+          where: { id: participantId },
+          data: {
+            wa_delivery_status: 'SENT',
+            wa_message_id: mockWamid,
+          },
+        })
+      })
+      return { success: true, outcome: 'MOCK_SUCCESS', metaMessageId: mockWamid }
+    }
+
+    // Default Section 2.D: Mock mode isolation
     // Atomically transition PENDING -> NOT_SENT. Never claim SENT/DELIVERED/READ on simulated dispatch.
     // No fake WAMID, no fake attempts.
     const claim = await db.whatsAppDelivery.updateMany({

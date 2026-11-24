@@ -83,11 +83,19 @@ export function redactSecrets(input: string, tokenToRedact?: string): string {
  * - In explicit mock mode, credentials are not required.
  */
 export function getMetaWhatsAppConfig(overrides?: Partial<MetaWhatsAppConfig>): MetaWhatsAppConfig {
-  const mockMode = overrides?.mockMode ?? (process.env.WHATSAPP_MOCK_MODE === 'true')
+  const isE2E = process.env.APP_ENV === 'e2e' || process.env.NEXT_PUBLIC_APP_ENV === 'e2e'
+  const mockMode = overrides?.mockMode ?? (process.env.WHATSAPP_MOCK_MODE === 'true' || isE2E)
   const apiToken = overrides?.apiToken ?? process.env.WHATSAPP_CLOUD_API_TOKEN ?? ''
   const phoneNumberId = overrides?.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? ''
   const apiVersion = overrides?.apiVersion ?? process.env.WHATSAPP_API_VERSION ?? 'v22.0'
   const timeoutMs = overrides?.timeoutMs ?? (process.env.WHATSAPP_TIMEOUT_MS ? parseInt(process.env.WHATSAPP_TIMEOUT_MS, 10) : 15000)
+
+  // Fail-closed E2E safeguard: If running in E2E mode, mockMode MUST be true.
+  if (isE2E && overrides?.mockMode === false) {
+    throw new WhatsAppConfigurationError(
+      '[CRITICAL E2E SAFETY VIOLATION] Application is running in E2E mode (APP_ENV=e2e), but WHATSAPP_MOCK_MODE is disabled. Outbound Meta WhatsApp calls are strictly prohibited in E2E.'
+    )
+  }
 
   if (!mockMode) {
     if (!apiToken.trim() || !phoneNumberId.trim()) {
@@ -98,8 +106,8 @@ export function getMetaWhatsAppConfig(overrides?: Partial<MetaWhatsAppConfig>): 
   }
 
   return {
-    apiToken,
-    phoneNumberId,
+    apiToken: mockMode && !apiToken.trim() ? 'mock_api_token' : apiToken,
+    phoneNumberId: mockMode && !phoneNumberId.trim() ? 'mock_phone_id' : phoneNumberId,
     apiVersion,
     mockMode,
     timeoutMs,
@@ -226,11 +234,19 @@ export async function uploadWhatsAppMedia(
   const config = options?.config ?? getMetaWhatsAppConfig()
 
   if (config.mockMode) {
+    const mockMediaId = `mock_media_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     return {
       outcome: 'MEDIA_UPLOAD_SUCCESS',
-      mediaId: undefined,
+      mediaId: mockMediaId,
       durationMs: 0,
     }
+  }
+
+  // Fail-closed guard: ensure no E2E environment ever sends real media upload
+  if (process.env.APP_ENV === 'e2e') {
+    throw new WhatsAppConfigurationError(
+      '[FAIL-CLOSED GUARD] Attempted real Meta media upload in E2E environment. Aborted.'
+    )
   }
 
   const startTime = Date.now()
@@ -356,12 +372,21 @@ export async function sendWhatsAppTemplate(
   const config = options?.config ?? getMetaWhatsAppConfig()
 
   if (config.mockMode) {
+    const mockWamid = `wamid.mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     return {
       outcome: 'MOCK_SUCCESS',
       recipientPhone: payload.to,
       durationMs: 0,
       mock: true,
+      metaMessageId: mockWamid,
     }
+  }
+
+  // Fail-closed guard: ensure no E2E environment ever sends real Meta message
+  if (process.env.APP_ENV === 'e2e') {
+    throw new WhatsAppConfigurationError(
+      '[FAIL-CLOSED GUARD] Attempted real Meta message dispatch in E2E environment. Aborted.'
+    )
   }
 
   const startTime = Date.now()

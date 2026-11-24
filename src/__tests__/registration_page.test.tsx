@@ -83,23 +83,27 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
       '11112222-3333-4444-5555-666677778888'
     )
 
-    // Verify visual QR Code is generated
+    // Verify visual framed ticket image is generated and points to ticket image endpoint
     await waitFor(
       () => {
         const qrImage = screen.getByTestId('qr-image')
         expect(qrImage).toBeInTheDocument()
-        expect(qrImage.getAttribute('src')).toMatch(/^data:image\/png;base64,/)
+        expect(qrImage.getAttribute('src')).toBe(
+          '/api/ticket/11112222-3333-4444-5555-666677778888/image'
+        )
       },
       { timeout: 4000 }
     )
 
-    // Verify Download QR Code button
+    // Verify Download QR Code button uses framed ticket endpoint
     const downloadBtn = screen.getByTestId('download-qr-btn')
     expect(downloadBtn).toBeInTheDocument()
     expect(downloadBtn.getAttribute('download')).toBe(
       'tiket-jki-shema-11112222-3333-4444-5555-666677778888.png'
     )
-    expect(downloadBtn.getAttribute('href')).toMatch(/^data:image\/png;base64,/)
+    expect(downloadBtn.getAttribute('href')).toBe(
+      '/api/ticket/11112222-3333-4444-5555-666677778888/image'
+    )
   })
 
   it('Scenario A – Telah Berjemaat: displays dropdown and submits selected JKI Shema Sunter branch', async () => {

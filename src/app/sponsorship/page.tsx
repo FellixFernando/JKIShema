@@ -192,34 +192,35 @@ export default function SponsorshipPage() {
               </p>
             </div>
 
-            {/* QR Code Placeholder Card */}
+            {/* QR Code Card */}
             <div className="bg-[#FFFCF8] border border-[#A43A52]/25 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm space-y-5 relative overflow-hidden">
               {/* Top Accent Badge */}
               <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#A43A52]/20 text-[#7C152D] text-xs font-bold shadow-xs">
                 <span>QRIS Standar Pembayaran Nasional</span>
               </div>
 
-              {/* QR Code Placeholder Box */}
-              <div className="relative w-64 h-64 sm:w-72 sm:h-72 bg-white rounded-2xl border-2 border-dashed border-[#A43A52]/40 p-4 flex flex-col items-center justify-center shadow-md">
-                {/* Corner Accents */}
-                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#7C152D] rounded-tl" />
-                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#7C152D] rounded-tr" />
-                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#7C152D] rounded-bl" />
-                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#7C152D] rounded-br" />
+              {/* QR Code Container */}
+              <div className="relative w-full max-w-[280px] sm:max-w-[340px] aspect-square bg-white rounded-2xl border border-[#A43A52]/25 p-3 sm:p-4 shadow-md flex items-center justify-center">
+                <Image
+                  src="/images/ticket/qris-jkishema.png"
+                  alt="QRIS JKI Shema - Donasi & Persembahan Pelayanan"
+                  width={3307}
+                  height={3307}
+                  priority
+                  className="w-full h-full object-contain rounded-xl select-none"
+                />
+              </div>
 
-                {/* Center Content Placeholder */}
-                <div className="w-24 h-24 rounded-2xl bg-[#F5E8EB]/80 border border-[#A43A52]/25 flex items-center justify-center text-[#7C152D] mb-3 shadow-xs">
-                  <QrCode className="w-14 h-14 stroke-[1.6]" />
-                </div>
-                <span className="text-sm font-extrabold text-[#292329] tracking-wide">
-                  QRIS JKI SHEMA
-                </span>
-                <span className="text-[11px] text-[#766C70] mt-1 max-w-[200px]">
-                  [ Placeholder QR Code ]
-                </span>
-                <span className="text-[10px] text-[#7C152D] font-semibold mt-1">
-                  (Gambar QRIS resmi akan segera dipasang)
-                </span>
+              {/* Download QRIS Action */}
+              <div className="flex items-center justify-center">
+                <a
+                  href="/images/ticket/qris-jkishema.png"
+                  download="QRIS-JKI-Shema.png"
+                  className="inline-flex items-center gap-2 bg-[#7C152D] hover:bg-[#571020] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md shadow-[#7C152D]/15 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Unduh Gambar QRIS</span>
+                </a>
               </div>
 
               {/* Supported Payment Logos / Information */}

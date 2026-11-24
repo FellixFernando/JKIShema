@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 import { registerParticipant, registerBatchParticipants } from '@/services/registration.service'
 import { deliverParticipantTicket } from '@/services/whatsapp.service'
 import { db } from '@/lib/db'
@@ -462,6 +463,19 @@ describe('Phase 4B: Registration and WhatsApp Integration', () => {
       expect(res.success).toBe(true)
       expect(res.outcome).toBe('DISPATCH_SUCCESS')
       expect(res.metaMessageId).toBe('wamid.HBgLMTIzNDU2Nzg5MA==')
+
+      // Verify framed QR PNG was provided to uploadWhatsAppMedia
+      expect(uploadWhatsAppMedia).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'image/png',
+        'tiket-jki-shema-uuid-qr-prod-1.png',
+        expect.anything()
+      )
+      const uploadedBuffer = (uploadWhatsAppMedia as jest.Mock).mock.calls[0][0]
+      const uploadedMetadata = await sharp(uploadedBuffer).metadata()
+      expect(uploadedMetadata.width).toBe(1024)
+      expect(uploadedMetadata.height).toBe(768)
+      expect(uploadedMetadata.format).toBe('png')
 
       expect(db.whatsAppDeliveryAttempt.update).toHaveBeenCalledWith(
         expect.objectContaining({
