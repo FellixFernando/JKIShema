@@ -67,8 +67,8 @@ Dewi Lestari,08129999888,TIDAK_BERGEREJA,,Tidak`
   })
 
   // 2. CSV import exactly fills capacity succeeds
-  it('succeeds when CSV import exactly fills the venue capacity (438 existing + 2 = 440)', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(438)
+  it('succeeds when CSV import exactly fills the venue capacity (448 existing + 2 = 450)', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(448)
 
     const csv = `Nama Lengkap,Nomor WhatsApp
 Peserta Boundary 1,081200000001
@@ -81,8 +81,8 @@ Peserta Boundary 2,081200000002`
   })
 
   // 3. CSV import exceeding capacity is rejected
-  it('rejects CSV import when it exceeds the venue capacity of 440 (439 existing + 2 = 441)', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(439)
+  it('rejects CSV import when it exceeds the venue capacity of 450 (449 existing + 2 = 451)', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(449)
 
     const csv = `Nama Lengkap,Nomor WhatsApp
 Peserta Over 1,081200000001
@@ -93,20 +93,20 @@ Peserta Over 2,081200000002`
     )
   })
 
-  it('rejects CSV import of 1 participant when venue capacity is completely full (440 + 1)', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(440)
+  it('rejects CSV import of 1 participant when venue capacity is completely full (450 + 1)', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(450)
 
     const csv = `Nama Lengkap,Nomor WhatsApp
 Peserta Full,081200000001`
 
     await expect(importParticipantsFromCSV(csv)).rejects.toThrow(
-      'Kapasitas total acara (440 peserta) telah penuh.'
+      'Kapasitas total acara (450 peserta) telah penuh.'
     )
   })
 
   // 4. Insufficient capacity creates zero new records (atomic rollback)
   it('creates zero new records when capacity check fails', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(439)
+    ;(db.participant.count as jest.Mock).mockResolvedValue(449)
 
     const csv = `Nama Lengkap,Nomor WhatsApp
 Peserta A,081200000001
@@ -133,10 +133,10 @@ Peserta Active 1,081200000001`
 
   // 6. Duplicate CSV entries do not inflate the net-new participant count
   it('filters duplicate entries within the same CSV batch so they do not inflate net-new count', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(439)
+    ;(db.participant.count as jest.Mock).mockResolvedValue(449)
 
     // CSV has 3 lines with the same participant, so net-new is 1!
-    // 439 + 1 = 440, which fits!
+    // 449 + 1 = 450, which fits!
     const csv = `Nama Lengkap,Nomor WhatsApp
 Sama Duplikat,081211112222
 Sama Duplikat,081211112222
@@ -196,7 +196,7 @@ Lock Test,081255554444`
     expect(db.$executeRaw).toHaveBeenCalled()
   })
 
-  // 10. Concurrent CSV imports cannot exceed 440 (serialized by lock)
+  // 10. Concurrent CSV imports cannot exceed 450 (serialized by lock)
   it('serializes concurrent CSV imports via transaction advisory lock', async () => {
     let activeInTx = 0
     let maxConcurrentInTx = 0
@@ -225,7 +225,7 @@ Lock Test,081255554444`
     expect(db.$executeRaw).toHaveBeenCalledTimes(2)
   })
 
-  // 11. CSV import concurrent with normal registration cannot exceed 440
+  // 11. CSV import concurrent with normal registration cannot exceed 450
   it('shares the exact same venue_capacity_lock between CSV import and regular registration', async () => {
     ;(db.participant.count as jest.Mock).mockResolvedValue(438)
 
@@ -250,10 +250,17 @@ Lock Test,081255554444`
 
   // 12. Existing CSV parsing and validation behavior remains intact
   it('handles empty text, header-only CSV, or malformed rows cleanly without errors', async () => {
-    expect(await importParticipantsFromCSV('')).toEqual({ importedCount: 0, skippedCount: 0 })
+    expect(await importParticipantsFromCSV('')).toEqual({
+      importedCount: 0,
+      skippedCount: 0,
+      skipped: [],
+      dryRun: false,
+    })
     expect(await importParticipantsFromCSV('Nama Lengkap,Nomor WhatsApp')).toEqual({
       importedCount: 0,
       skippedCount: 0,
+      skipped: [],
+      dryRun: false,
     })
 
     const malformed = `Nama Lengkap,Nomor WhatsApp,Status,Cabang,Anak
@@ -267,13 +274,13 @@ Valid Person,08123456789,BERGEREJA,Sunter,Ya`
     expect(res.skippedCount).toBe(0)
   })
 
-  // 13. CSV Opt-in Defaults to False
-  it('strictly sets is_wa_opt_in to false for all CSV-imported participants', async () => {
+  // 13. CSV import sets WhatsApp consent for all imported participants
+  it('sets is_wa_opt_in to true for all CSV-imported participants', async () => {
     ;(db.participant.count as jest.Mock).mockResolvedValue(50)
 
     const csv = `Nama Lengkap,Nomor WhatsApp
-OptOut User 1,081233334444
-OptOut User 2,081255556666`
+OptIn User 1,081233334444
+OptIn User 2,081255556666`
 
     await importParticipantsFromCSV(csv)
 
@@ -281,8 +288,8 @@ OptOut User 2,081255556666`
     const call1 = (db.participant.create as jest.Mock).mock.calls[0][0]
     const call2 = (db.participant.create as jest.Mock).mock.calls[1][0]
 
-    expect(call1.data.is_wa_opt_in).toBe(false)
-    expect(call2.data.is_wa_opt_in).toBe(false)
+    expect(call1.data.is_wa_opt_in).toBe(true)
+    expect(call2.data.is_wa_opt_in).toBe(true)
   })
 
   // 14. Opted-out CSV participants cannot resend
@@ -407,7 +414,7 @@ New User,081299998888`
     expect(createdData.church_status).toBe('BERGEREJA')
     expect(createdData.church_branch).toBe('JKI Shema Sunter, Jakarta')
     expect(createdData.is_child).toBe(false)
-    expect(createdData.is_wa_opt_in).toBe(false)
+    expect(createdData.is_wa_opt_in).toBe(true)
   })
 
   // 20. API Error Handling (POST /api/admin/import)
@@ -465,7 +472,7 @@ New User,081299998888`
       ;(getServerSession as jest.Mock).mockResolvedValue({
         user: { name: 'admin', role: 'ADMIN' },
       })
-      ;(db.participant.count as jest.Mock).mockResolvedValue(440)
+      ;(db.participant.count as jest.Mock).mockResolvedValue(450)
 
       const req = new Request('http://localhost:3000/api/admin/import', {
         method: 'POST',

@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import crypto from 'crypto'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
 import { cancelParticipant } from '@/services/dashboard.service'
+import { getRegistrationSettings } from '@/services/config.service'
 
 const CANCEL_INTENT_KEYWORDS = ['batal', 'cancel', 'tidak hadir']
 
@@ -149,28 +150,51 @@ function parseCsvLine(line: string): string[] {
   return result.map((c) => c.replace(/^"|"$/g, '').trim())
 }
 
-export async function importParticipantsFromCSV(csvText: string) {
-  const lines = csvText.split(/\r?\n/).filter((l) => l.trim() !== '')
+export interface CsvImportSkipped {
+  line: number
+  reason: string
+}
+
+export interface CsvImportResult {
+  importedCount: number
+  skippedCount: number
+  skipped: CsvImportSkipped[]
+  dryRun: boolean
+}
+
+export async function importParticipantsFromCSV(
+  csvText: string,
+  options: { dryRun?: boolean; limit?: number } = {}
+): Promise<CsvImportResult> {
+  const dryRun = options.dryRun === true
+  const cleanText = csvText.replace(/^\uFEFF/, '')
+  const lines = cleanText.split(/\r?\n/).filter((l) => l.trim() !== '')
   if (lines.length <= 1) {
-    return { importedCount: 0, skippedCount: 0 }
+    return { importedCount: 0, skippedCount: 0, skipped: [], dryRun }
   }
 
-  // Header-aware column mapping
+  // Header-aware column mapping (Google Forms headers included)
   const headerCols = parseCsvLine(lines[0]).map((h) => h.toLowerCase())
   const hasIdHeader = headerCols[0] === 'id'
 
   let nameIdx = headerCols.findIndex((h) => ['nama lengkap', 'nama', 'name', 'full_name'].includes(h))
-  let phoneIdx = headerCols.findIndex((h) => ['nomor whatsapp', 'no wa', 'whatsapp', 'no. whatsapp', 'phone', 'whatsapp_number'].includes(h))
-  let churchStatusIdx = headerCols.findIndex((h) => ['status bergereja', 'church_status', 'status gereja'].includes(h))
-  let churchBranchIdx = headerCols.findIndex((h) => ['cabang', 'church_branch', 'gereja', 'cabang gereja'].includes(h))
-  let isChildIdx = headerCols.findIndex((h) => ['anak', 'is_child', 'kategori anak'].includes(h))
+  let phoneIdx = headerCols.findIndex((h) =>
+    ['nomor whatsapp', 'no wa', 'whatsapp', 'no. whatsapp', 'phone', 'whatsapp_number', 'no. telp', 'no.telp'].includes(h)
+  )
+  let churchStatusIdx = headerCols.findIndex((h) =>
+    ['status bergereja', 'church_status', 'status gereja', 'apakah sudah bergereja?'].includes(h)
+  )
+  let churchBranchIdx = headerCols.findIndex((h) =>
+    ['cabang', 'church_branch', 'gereja', 'cabang gereja', 'anda berjemaat di jki cabang?'].includes(h)
+  )
 
   // Positional fallback if header names are not detected
   if (nameIdx === -1) nameIdx = hasIdHeader ? 1 : 0
   if (phoneIdx === -1) phoneIdx = hasIdHeader ? 2 : 1
   if (churchStatusIdx === -1) churchStatusIdx = hasIdHeader ? 3 : 3
   if (churchBranchIdx === -1) churchBranchIdx = hasIdHeader ? 4 : 4
-  if (isChildIdx === -1) isChildIdx = hasIdHeader ? 5 : 5
+
+  const dataLines = typeof options.limit === 'number' ? lines.slice(1, 1 + Math.max(0, options.limit)) : lines.slice(1)
 
   const executeInTx = async <T>(fn: (tx: any) => Promise<T>): Promise<T> => {
     if (typeof db.$transaction === 'function') {
@@ -189,8 +213,9 @@ export async function importParticipantsFromCSV(csvText: string) {
       }
     }
 
-    let skippedCount = 0
+    const skipped: CsvImportSkipped[] = []
     const seenBatchKeys = new Set<string>()
+    const seenPhones = new Set<string>()
     const validNewParticipants: Array<{
       full_name: string
       whatsapp_number: string
@@ -199,9 +224,10 @@ export async function importParticipantsFromCSV(csvText: string) {
       is_child: boolean
     }> = []
 
-    // 2. Parse lines and filter duplicates
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseCsvLine(lines[i])
+    // 2. Parse rows, map status/branch, infer children by shared phone, filter duplicates
+    for (let i = 0; i < dataLines.length; i++) {
+      const lineNumber = i + 2
+      const cols = parseCsvLine(dataLines[i])
       if (cols.length < 2) continue
 
       const full_name = cols[nameIdx]
@@ -214,14 +240,13 @@ export async function importParticipantsFromCSV(csvText: string) {
       try {
         normalizedPhone = normalizeWhatsAppNumber(rawPhone)
       } catch {
-        // Disallow invalid phone numbers: skip and account in skippedCount
-        skippedCount++
+        skipped.push({ line: lineNumber, reason: 'invalid phone number' })
         continue
       }
 
       const batchKey = `${full_name.toLowerCase()}::${normalizedPhone}`
       if (seenBatchKeys.has(batchKey)) {
-        skippedCount++
+        skipped.push({ line: lineNumber, reason: 'duplicate name and phone number in file' })
         continue
       }
 
@@ -238,63 +263,90 @@ export async function importParticipantsFromCSV(csvText: string) {
       })
 
       if (existing) {
-        skippedCount++
+        skipped.push({ line: lineNumber, reason: 'duplicate name and phone number already registered' })
         continue
       }
 
       seenBatchKeys.add(batchKey)
+
+      // First accepted row per phone is the registrant; later rows sharing it are children.
+      const isChild = seenPhones.has(normalizedPhone)
+      seenPhones.add(normalizedPhone)
+
+      const rawStatus = (cols[churchStatusIdx] || '').trim().toLowerCase()
+      const church_status = rawStatus.startsWith('belum') ? 'TIDAK_BERGEREJA' : 'BERGEREJA'
+
       validNewParticipants.push({
         full_name,
         whatsapp_number: normalizedPhone,
-        church_status: (cols[churchStatusIdx] as any) === 'TIDAK_BERGEREJA' ? 'TIDAK_BERGEREJA' : 'BERGEREJA',
+        church_status,
         church_branch: cols[churchBranchIdx] || null,
-        is_child: cols[isChildIdx] === 'Ya' || cols[isChildIdx] === 'true',
+        is_child: isChild,
       })
     }
 
-    // 3. Enforce combined venue capacity (440)
+    const skippedCount = skipped.length
+
+    // 3. Enforce the configured venue capacity
     const newParticipantCount = validNewParticipants.length
     if (newParticipantCount > 0) {
-      const totalVenueCapacity = 440
+      const { totalCapacity } = await getRegistrationSettings(tx)
       const totalActiveCount = await tx.participant.count({
         where: {
           status: { in: ['REGISTERED', 'CHECKED_IN'] },
         },
       })
 
-      if (totalActiveCount + newParticipantCount > totalVenueCapacity) {
+      if (totalActiveCount + newParticipantCount > totalCapacity) {
         if (newParticipantCount === 1) {
-          throw new Error('Kapasitas total acara (440 peserta) telah penuh.')
+          throw new Error(`Kapasitas total acara (${totalCapacity} peserta) telah penuh.`)
         }
         throw new Error(
           `Kapasitas total acara tidak mencukupi untuk mengimpor ${newParticipantCount} peserta baru (sisa kuota: ${Math.max(
             0,
-            totalVenueCapacity - totalActiveCount
+            totalCapacity - totalActiveCount
           )}).`
         )
       }
     }
 
-    // 4. Atomically persist participants using transaction client
-    // is_wa_opt_in is strictly false: never infer WhatsApp consent from CSV import
+    if (dryRun) {
+      return { importedCount: validNewParticipants.length, skippedCount, skipped, dryRun }
+    }
+
+    // 4. Atomically persist participants and their pending WhatsApp delivery rows
     let importedCount = 0
     for (const item of validNewParticipants) {
-      await tx.participant.create({
+      const qr_token = crypto.randomUUID()
+      const participant = await tx.participant.create({
         data: {
           full_name: item.full_name,
           whatsapp_number: item.whatsapp_number,
           church_status: item.church_status,
           church_branch: item.church_branch,
           is_child: item.is_child,
-          is_wa_opt_in: false,
-          qr_token: crypto.randomUUID(),
+          is_wa_opt_in: true,
+          qr_token,
           status: 'REGISTERED',
           registration_type: 'ONLINE',
+          wa_delivery_status: 'PENDING',
         },
       })
+
+      await tx.whatsAppDelivery.create({
+        data: {
+          participant_id: participant.id,
+          participant_name: item.full_name,
+          qr_token_snapshot: qr_token,
+          recipient_phone: item.whatsapp_number,
+          status: 'PENDING',
+          total_attempts: 0,
+        },
+      })
+
       importedCount++
     }
 
-    return { importedCount, skippedCount }
+    return { importedCount, skippedCount, skipped, dryRun }
   })
 }

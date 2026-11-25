@@ -13,6 +13,7 @@
     "test": "jest",
     "create-admin": "ts-node -P tsconfig.scripts.json -r tsconfig-paths/register scripts/create-admin.ts",
     "reset-admin-password": "ts-node -P tsconfig.scripts.json -r tsconfig-paths/register scripts/reset-admin-password.ts",
+    "import-csv": "ts-node -P tsconfig.scripts.json -r tsconfig-paths/register scripts/import-csv.ts",
     "test:e2e": "node --env-file=.env.e2e.local ./scripts/e2e-env-guard.js ./node_modules/.bin/playwright test",
     "test:e2e:ui": "node --env-file=.env.e2e.local ./scripts/e2e-env-guard.js ./node_modules/.bin/playwright test --ui",
     "test:e2e:headed": "node --env-file=.env.e2e.local ./scripts/e2e-env-guard.js ./node_modules/.bin/playwright test --headed",

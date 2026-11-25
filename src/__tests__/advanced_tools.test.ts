@@ -11,6 +11,9 @@ jest.mock('@/lib/db', () => {
       create: jest.fn(),
       count: jest.fn(),
     },
+    whatsAppDelivery: {
+      create: jest.fn(),
+    },
     $executeRaw: jest.fn().mockResolvedValue(1),
     $transaction: jest.fn((callback) => callback(mockDb)),
   }
