@@ -185,6 +185,22 @@ export async function executeManualResend(
 ): Promise<{ status: number; body: ResendResult }> {
   const { participantId, adminUsername, reason } = options
 
+  // Kill switch: block resend before any database access
+  if (process.env.WHATSAPP_SENDING_ENABLED !== 'true') {
+    return {
+      status: 503,
+      body: {
+        success: false,
+        participantId,
+        deliveryStatus: 'UNKNOWN',
+        attemptNumber: 0,
+        error: 'SENDING_DISABLED',
+        errorCode: 'SENDING_DISABLED',
+        details: 'Pengiriman WhatsApp sedang dinonaktifkan.',
+      },
+    }
+  }
+
   // 1. Load Participant and Delivery
   const participant = await db.participant.findUnique({
     where: { id: participantId },

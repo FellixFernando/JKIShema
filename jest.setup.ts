@@ -9,6 +9,8 @@ beforeEach(() => {
 
 // Explicitly default WhatsApp service to mock mode in test environment
 process.env.WHATSAPP_MOCK_MODE = process.env.WHATSAPP_MOCK_MODE || 'true'
+// Sending defaults to enabled in tests; suites that exercise the kill switch override it.
+process.env.WHATSAPP_SENDING_ENABLED = process.env.WHATSAPP_SENDING_ENABLED || 'true'
 process.env.NEXTAUTH_SECRET = 'test-secret'
 
 if (typeof global.TextEncoder === 'undefined') {
