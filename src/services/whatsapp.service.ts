@@ -481,10 +481,12 @@ export async function deliverParticipantTicket(
   }
 
   // 6. Build Approved TEST Template Payload (jkishema_registration_qr_3)
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'jkishema_registration_qr_3'
+  const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || 'id'
   const payload = buildWhatsAppTemplatePayload(
     delivery.recipient_phone,
-    'jkishema_registration_qr_3',
-    'id',
+    templateName,
+    templateLang,
     [
       {
         type: 'header',
