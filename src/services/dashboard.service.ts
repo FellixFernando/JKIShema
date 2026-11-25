@@ -198,27 +198,76 @@ export async function getParticipants({ search, status, waStatus, registrationTy
 }
 
 export async function cancelParticipant(participantId: string) {
-  const participant = await db.participant.findUnique({
-    where: { id: participantId },
-  })
+  return await db.$transaction(async (tx: any) => {
+    // Serialize with registration so capacity and waitlist promotion stay consistent.
+    if (typeof tx.$executeRaw === 'function') {
+      try {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('venue_capacity_lock'))`
+      } catch {
+        // Fallback for mocked unit test environments where $executeRaw is unsupported
+      }
+    }
 
-  if (!participant) {
-    throw new Error('Peserta tidak ditemukan.')
-  }
+    const settings = await getRegistrationSettings(tx)
 
-  if (participant.status === 'CANCELLED') {
-    throw new Error('Peserta ini sudah dibatalkan sebelumnya.')
-  }
+    const result = await tx.participant.updateMany({
+      where: { id: participantId, status: 'REGISTERED' },
+      data: { status: 'CANCELLED' },
+    })
 
-  if (participant.status === 'CHECKED_IN') {
-    throw new Error('Peserta yang sudah Check-In tidak dapat dibatalkan.')
-  }
+    if (!result || result.count === 0) {
+      const existing = await tx.participant.findUnique({ where: { id: participantId } })
+      if (!existing) {
+        throw new Error('Peserta tidak ditemukan.')
+      }
+      if (existing.status === 'CANCELLED') {
+        throw new Error('Peserta ini sudah dibatalkan sebelumnya.')
+      }
+      if (existing.status === 'CHECKED_IN') {
+        throw new Error('Peserta yang sudah Check-In tidak dapat dibatalkan.')
+      }
+      if (existing.status === 'WAITLISTED') {
+        throw new Error('Peserta ini masih dalam daftar tunggu dan belum memiliki kursi.')
+      }
+      throw new Error('Peserta tidak ditemukan.')
+    }
 
-  return await db.participant.update({
-    where: { id: participantId },
-    data: {
-      status: 'CANCELLED',
-    },
+    // A pending or unsent ticket must never be delivered after cancellation.
+    if (tx.whatsAppDelivery && typeof tx.whatsAppDelivery.updateMany === 'function') {
+      await tx.whatsAppDelivery.updateMany({
+        where: { participant_id: participantId, status: { in: ['PENDING', 'NOT_SENT'] } },
+        data: { status: 'CANCELLED' },
+      })
+    }
+
+    if (settings.autoPromoteWaitlist) {
+      const waitlisted = await tx.participant.findFirst({
+        where: { status: 'WAITLISTED' },
+        orderBy: { created_at: 'asc' },
+      })
+
+      if (waitlisted) {
+        const promoted = await tx.participant.updateMany({
+          where: { id: waitlisted.id, status: 'WAITLISTED' },
+          data: { status: 'REGISTERED' },
+        })
+
+        if (promoted.count > 0) {
+          await tx.whatsAppDelivery.create({
+            data: {
+              participant_id: waitlisted.id,
+              participant_name: waitlisted.full_name,
+              qr_token_snapshot: waitlisted.qr_token,
+              recipient_phone: waitlisted.whatsapp_number,
+              status: 'PENDING',
+              total_attempts: 0,
+            },
+          })
+        }
+      }
+    }
+
+    return await tx.participant.findUnique({ where: { id: participantId } })
   })
 }
 

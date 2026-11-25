@@ -11,12 +11,14 @@ jest.mock('@/lib/db', () => {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
     },
     whatsAppDelivery: {
       create: jest.fn().mockResolvedValue({ id: 'mock-del-id' }),
       findFirst: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     systemConfig: {
       findUnique: jest.fn(),
@@ -37,12 +39,8 @@ describe('Cancel Participant Feature', () => {
 
   describe('Service Logic (cancelParticipant)', () => {
     it('cancels a REGISTERED participant and updates status to CANCELLED', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
-        id: 'part-1',
-        full_name: 'Yohanes',
-        status: 'REGISTERED',
-      });
-      (db.participant.update as jest.Mock).mockResolvedValue({
         id: 'part-1',
         full_name: 'Yohanes',
         status: 'CANCELLED',
@@ -51,13 +49,14 @@ describe('Cancel Participant Feature', () => {
       const res = await cancelParticipant('part-1')
 
       expect(res.status).toBe('CANCELLED')
-      expect(db.participant.update).toHaveBeenCalledWith({
-        where: { id: 'part-1' },
+      expect(db.participant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'part-1', status: 'REGISTERED' },
         data: { status: 'CANCELLED' },
       })
     })
 
     it('rejects cancellation of a CHECKED_IN participant', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
         id: 'part-2',
         full_name: 'Maria',
@@ -67,10 +66,11 @@ describe('Cancel Participant Feature', () => {
       await expect(cancelParticipant('part-2')).rejects.toThrow(
         'Peserta yang sudah Check-In tidak dapat dibatalkan.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
 
     it('rejects cancellation if already CANCELLED', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
         id: 'part-3',
         full_name: 'Markus',
@@ -80,16 +80,17 @@ describe('Cancel Participant Feature', () => {
       await expect(cancelParticipant('part-3')).rejects.toThrow(
         'Peserta ini sudah dibatalkan sebelumnya.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
 
     it('rejects cancellation if participant does not exist', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(cancelParticipant('non-existent')).rejects.toThrow(
         'Peserta tidak ditemukan.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
   })
 
@@ -191,12 +192,8 @@ describe('Cancel Participant Feature', () => {
       (getServerSession as jest.Mock).mockResolvedValue({
         user: { name: 'admin', role: 'ADMIN' },
       });
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
-        id: 'part-1',
-        full_name: 'Yohanes',
-        status: 'REGISTERED',
-      });
-      (db.participant.update as jest.Mock).mockResolvedValue({
         id: 'part-1',
         full_name: 'Yohanes',
         status: 'CANCELLED',
@@ -234,6 +231,7 @@ describe('Cancel Participant Feature', () => {
       (getServerSession as jest.Mock).mockResolvedValue({
         user: { name: 'admin', role: 'ADMIN' },
       });
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue(null);
 
       const req = new Request('http://localhost/api/admin/participants', {

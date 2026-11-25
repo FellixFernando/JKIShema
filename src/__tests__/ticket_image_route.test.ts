@@ -47,11 +47,25 @@ describe('GET /api/ticket/[token]/image', () => {
     expect(metadata.height).toBe(768)
     expect(metadata.format).toBe('png')
 
-    // Verify database query only queried id and qr_token, no personal data
+    // Verify database query only queried id, qr_token and status, no other personal data
     expect(db.participant.findUnique).toHaveBeenCalledWith({
       where: { qr_token: validToken },
-      select: { id: true, qr_token: true },
+      select: { id: true, qr_token: true, status: true },
     })
+  })
+
+  it('returns HTTP 404 for a cancelled participant token', async () => {
+    ;(db.participant.findUnique as jest.Mock).mockResolvedValue({
+      id: 'p-cancelled',
+      qr_token: validToken,
+      status: 'CANCELLED',
+    })
+
+    const req = new Request(`http://localhost/api/ticket/${validToken}/image`)
+    const res = await GET(req, { params: Promise.resolve({ token: validToken }) })
+
+    expect(res.status).toBe(404)
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
   })
 
   it('supports synchronous params object context in testing environment', async () => {

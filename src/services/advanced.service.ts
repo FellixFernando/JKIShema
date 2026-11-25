@@ -1,19 +1,39 @@
 import { db } from '@/lib/db'
 import crypto from 'crypto'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
+import { cancelParticipant } from '@/services/dashboard.service'
+
+const CANCEL_INTENT_KEYWORDS = ['batal', 'cancel', 'tidak hadir']
+
+// Lowercase alphanumerics separated by single spaces, so name matching ignores case and punctuation.
+const normalizeName = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+// Whole-word containment: the normalized name must appear as a standalone phrase.
+const containsWholeWords = (haystack: string, needle: string): boolean =>
+  needle.length > 0 && ` ${haystack} `.includes(` ${needle} `)
 
 export async function processRSVPWebhook(whatsappNumber: string, messageText: string) {
-  const cleanWA = whatsappNumber.trim()
   const cleanMsg = messageText.toLowerCase().trim()
 
-  const participant = await db.participant.findFirst({
+  let canonicalPhone: string
+  try {
+    canonicalPhone = normalizeWhatsAppNumber(whatsappNumber)
+  } catch {
+    canonicalPhone = whatsappNumber.trim()
+  }
+  const phoneVariants = canonicalPhone.startsWith('628')
+    ? [canonicalPhone, '08' + canonicalPhone.slice(3)]
+    : [canonicalPhone]
+
+  const participants = await db.participant.findMany({
     where: {
-      whatsapp_number: cleanWA,
+      whatsapp_number: { in: phoneVariants },
       status: { in: ['REGISTERED', 'CHECKED_IN'] },
     },
   })
 
-  if (!participant) {
+  if (!participants || participants.length === 0) {
     return {
       success: false,
       message: 'Peserta dengan nomor WA tersebut tidak ditemukan.',
@@ -21,25 +41,56 @@ export async function processRSVPWebhook(whatsappNumber: string, messageText: st
     }
   }
 
-  if (cleanMsg.includes('tidak hadir') || cleanMsg.includes('batal') || cleanMsg.includes('cancel')) {
-    const updated = await db.participant.update({
-      where: { id: participant.id },
-      data: { status: 'CANCELLED' },
-    })
+  const cancelIntent = CANCEL_INTENT_KEYWORDS.some((keyword) => cleanMsg.includes(keyword))
 
+  if (!cancelIntent) {
+    const participant = participants[0]
     return {
       success: true,
-      message: `Pendaftaran atas nama ${participant.full_name} telah dibatalkan. Kuota terbebas kembali.`,
-      action: 'CANCELLED',
-      participant: updated,
+      message: `Pendaftaran atas nama ${participant.full_name} dikonfirmasi hadir.`,
+      action: 'CONFIRMED',
+      participant,
     }
   }
 
+  const normalizedMsg = normalizeName(cleanMsg)
+  const matches = participants.filter((p: any) =>
+    containsWholeWords(normalizedMsg, normalizeName(p.full_name))
+  )
+
+  if (matches.length === 0) {
+    return {
+      success: false,
+      message: 'Nama peserta yang ingin dibatalkan tidak dikenali. Balas dengan nama lengkap peserta.',
+      action: 'NEEDS_NAME',
+    }
+  }
+
+  if (matches.length > 1) {
+    return {
+      success: false,
+      message: 'Lebih dari satu nama cocok. Sertakan nama lengkap satu peserta saja.',
+      action: 'AMBIGUOUS',
+    }
+  }
+
+  const match = matches[0]
+
+  if (match.status === 'CHECKED_IN') {
+    return {
+      success: false,
+      message: `Peserta ${match.full_name} sudah Check-In dan tidak dapat dibatalkan otomatis. Hubungi panitia.`,
+      action: 'REVIEW_CHECKED_IN',
+    }
+  }
+
+  const cancelled = await cancelParticipant(match.id)
+
   return {
     success: true,
-    message: `Pendaftaran atas nama ${participant.full_name} dikonfirmasi hadir.`,
-    action: 'CONFIRMED',
-    participant,
+    message: `Pendaftaran atas nama ${match.full_name} telah dibatalkan. Kuota terbebas kembali.`,
+    action: 'CANCELLED',
+    participant: cancelled,
   }
 }
 

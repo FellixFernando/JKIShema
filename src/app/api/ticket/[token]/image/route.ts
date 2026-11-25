@@ -48,7 +48,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   try {
     participant = await db.participant.findUnique({
       where: { qr_token: token },
-      select: { id: true, qr_token: true },
+      select: { id: true, qr_token: true, status: true },
     })
   } catch (dbErr: any) {
     console.error('[TICKET IMAGE API] Database lookup error:', dbErr?.message || dbErr)
@@ -61,7 +61,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
     })
   }
 
-  if (!participant) {
+  if (!participant || participant.status === 'CANCELLED') {
     return new Response(JSON.stringify({ error: 'Ticket not found' }), {
       status: 404,
       headers: {

@@ -2,22 +2,35 @@ import { getDashboardStats, getParticipants, cancelParticipant } from '@/service
 import { db } from '@/lib/db'
 import { getRegistrationSettings } from '@/services/config.service'
 
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const mockDb: any = {
     participant: {
       count: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    whatsAppDelivery: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      create: jest.fn(),
     },
     systemConfig: {
       findUnique: jest.fn(),
     },
-  },
-}))
+    $transaction: jest.fn((callback: any) => callback(mockDb)),
+  }
+  return { db: mockDb }
+})
 
 jest.mock('@/services/config.service', () => ({
-  getRegistrationSettings: jest.fn(),
+  getRegistrationSettings: jest.fn().mockResolvedValue({
+    totalCapacity: 450,
+    maxOnlineQuota: 450,
+    isRegistrationOpen: true,
+    autoPromoteWaitlist: true,
+  }),
 }))
 
 describe('Admin Dashboard Service', () => {
@@ -83,12 +96,8 @@ describe('Admin Dashboard Service', () => {
 
   describe('cancelParticipant', () => {
     it('should successfully cancel a REGISTERED participant', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
-        id: 'p1',
-        full_name: 'Budi Santoso',
-        status: 'REGISTERED',
-      });
-      (db.participant.update as jest.Mock).mockResolvedValue({
         id: 'p1',
         full_name: 'Budi Santoso',
         status: 'CANCELLED',
@@ -97,13 +106,14 @@ describe('Admin Dashboard Service', () => {
       const result = await cancelParticipant('p1')
 
       expect(result.status).toBe('CANCELLED')
-      expect(db.participant.update).toHaveBeenCalledWith({
-        where: { id: 'p1' },
+      expect(db.participant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', status: 'REGISTERED' },
         data: { status: 'CANCELLED' },
       })
     })
 
     it('should throw error when cancelling a CHECKED_IN participant', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
         id: 'p2',
         full_name: 'Ani',
@@ -113,10 +123,11 @@ describe('Admin Dashboard Service', () => {
       await expect(cancelParticipant('p2')).rejects.toThrow(
         'Peserta yang sudah Check-In tidak dapat dibatalkan.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
 
     it('should throw error when participant is already CANCELLED', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue({
         id: 'p3',
         full_name: 'Candra',
@@ -126,16 +137,17 @@ describe('Admin Dashboard Service', () => {
       await expect(cancelParticipant('p3')).rejects.toThrow(
         'Peserta ini sudah dibatalkan sebelumnya.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
 
     it('should throw error when participant is not found', async () => {
+      (db.participant.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
       (db.participant.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(cancelParticipant('p404')).rejects.toThrow(
         'Peserta tidak ditemukan.'
       )
-      expect(db.participant.update).not.toHaveBeenCalled()
+      expect(db.whatsAppDelivery.updateMany).not.toHaveBeenCalled()
     })
   })
 })

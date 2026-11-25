@@ -1,5 +1,6 @@
 import { processRSVPWebhook, exportParticipantsToCSV, importParticipantsFromCSV } from '@/services/advanced.service'
 import { db } from '@/lib/db'
+import { cancelParticipant } from '@/services/dashboard.service'
 
 jest.mock('@/lib/db', () => {
   const mockDb: any = {
@@ -16,12 +17,17 @@ jest.mock('@/lib/db', () => {
   return { db: mockDb }
 })
 
+jest.mock('@/services/dashboard.service', () => ({
+  cancelParticipant: jest.fn(),
+}))
+
 describe('Advanced Admin Tools & RSVP Webhook', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(cancelParticipant as jest.Mock).mockResolvedValue({ id: 'p1', status: 'CANCELLED' })
   })
 
-  it('should update participant status to CANCELLED if RSVP reply is "Tidak Hadir"', async () => {
+  it('should cancel the named participant if RSVP reply is "Tidak Hadir"', async () => {
     const mockParticipant = {
       id: 'p1',
       full_name: 'Dewi Lestari',
@@ -29,19 +35,12 @@ describe('Advanced Admin Tools & RSVP Webhook', () => {
       status: 'REGISTERED',
     };
 
-    (db.participant.findFirst as jest.Mock).mockResolvedValue(mockParticipant);
-    (db.participant.update as jest.Mock).mockResolvedValue({
-      ...mockParticipant,
-      status: 'CANCELLED',
-    })
+    (db.participant.findMany as jest.Mock).mockResolvedValue([mockParticipant])
 
-    const result = await processRSVPWebhook('08123456789', 'Maaf saya tidak hadir')
+    const result = await processRSVPWebhook('08123456789', 'Maaf saya tidak hadir, Dewi Lestari')
 
     expect(result.action).toBe('CANCELLED')
-    expect(db.participant.update).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: { status: 'CANCELLED' },
-    })
+    expect(cancelParticipant).toHaveBeenCalledWith('p1')
   })
 
   it('should keep participant status if RSVP reply is "Hadir"', async () => {
@@ -52,12 +51,12 @@ describe('Advanced Admin Tools & RSVP Webhook', () => {
       status: 'REGISTERED',
     };
 
-    (db.participant.findFirst as jest.Mock).mockResolvedValue(mockParticipant)
+    (db.participant.findMany as jest.Mock).mockResolvedValue([mockParticipant])
 
     const result = await processRSVPWebhook('08123456789', 'Saya akan Hadir')
 
     expect(result.action).toBe('CONFIRMED')
-    expect(db.participant.update).not.toHaveBeenCalled()
+    expect(cancelParticipant).not.toHaveBeenCalled()
   })
 
   it('should export participant array into valid CSV string', () => {
