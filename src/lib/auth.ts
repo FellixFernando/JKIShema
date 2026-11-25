@@ -2,6 +2,16 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { verifyCredentials } from "@/services/auth.service";
 
+export function resolveNextAuthSecret(env: { NEXTAUTH_SECRET?: string } = process.env): string {
+  const secret = env.NEXTAUTH_SECRET?.trim()
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is required");
+  }
+  return secret
+}
+
+const secret = resolveNextAuthSecret()
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -47,18 +57,8 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 12 * 60 * 60,
+    updateAge: 60 * 60,
   },
-  useSecureCookies: false,
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: false,
-      },
-    },
-  },
-  secret: process.env.NEXTAUTH_SECRET || "default_secret_for_development",
+  secret,
 };

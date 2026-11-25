@@ -46,6 +46,11 @@ DIRECT_URL="postgresql://postgres.[project-id]:[password]@aws-0-ap-southeast-1.p
 NEXTAUTH_SECRET="rahasia_gereja_christmas_123"
 ```
 
+Lihat `.env.example` untuk daftar lengkap variabel (termasuk WhatsApp, webhook, dan `APP_ENV`).
+Untuk produksi, salin `.env.production.example` dan isi nilainya. Secara default
+`WHATSAPP_MOCK_MODE` aktif (mock) di luar production, sehingga tidak ada pesan WhatsApp
+sungguhan yang terkirim saat development.
+
 ### 4. Sinkronisasi Database & Generate Prisma Client
 Jalankan migrasi yang sudah ada di `prisma/migrations` lalu generate Prisma Client:
 
@@ -66,6 +71,7 @@ Jalankan seeder untuk mengisi akun Master Admin default:
 ```bash
 npx prisma db seed
 ```
+> Script seed berjalan lewat `ts-node -P tsconfig.scripts.json` (lihat `package.json`).
 > **Default Kredensial Admin:**
 > - Username: `master`
 > - Password: `master123`

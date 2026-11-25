@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main, release/live]
+  pull_request:
+    branches: [main, release/live]
+
+env:
+  NEXTAUTH_SECRET: ci-test-secret
+  DATABASE_URL: postgresql://user:pass@localhost:5432/db
+  DIRECT_URL: postgresql://user:pass@localhost:5432/db
+  WHATSAPP_MOCK_MODE: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npx jest --ci
+      - run: npm run build

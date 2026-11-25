@@ -84,7 +84,13 @@ export function redactSecrets(input: string, tokenToRedact?: string): string {
  */
 export function getMetaWhatsAppConfig(overrides?: Partial<MetaWhatsAppConfig>): MetaWhatsAppConfig {
   const isE2E = process.env.APP_ENV === 'e2e' || process.env.NEXT_PUBLIC_APP_ENV === 'e2e'
-  const mockMode = overrides?.mockMode ?? (process.env.WHATSAPP_MOCK_MODE === 'true' || isE2E)
+  const explicitMockMode = process.env.WHATSAPP_MOCK_MODE
+  // An explicit flag wins; unset defaults to mock in E2E and everywhere outside production.
+  const mockMode =
+    overrides?.mockMode ??
+    (explicitMockMode !== undefined
+      ? explicitMockMode === 'true'
+      : isE2E || process.env.NODE_ENV !== 'production')
   const apiToken = overrides?.apiToken ?? process.env.WHATSAPP_CLOUD_API_TOKEN ?? ''
   const phoneNumberId = overrides?.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID ?? ''
   const apiVersion = overrides?.apiVersion ?? process.env.WHATSAPP_API_VERSION ?? 'v22.0'

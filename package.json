@@ -43,6 +43,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "jest": "^30.5.2",
@@ -50,9 +51,11 @@
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\\module\\:\\CommonJS\\} prisma/seed.ts"
+    "seed": "ts-node -P tsconfig.scripts.json prisma/seed.ts"
   }
 }

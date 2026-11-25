@@ -1,23 +1,14 @@
 import { withAuth } from "next-auth/middleware";
+import { authorizedCallback } from "@/lib/auth-guard";
+
+if (!process.env.NEXTAUTH_SECRET?.trim()) {
+  throw new Error("NEXTAUTH_SECRET is required");
+}
 
 export default withAuth({
-  cookies: {
-    sessionToken: {
-      name: "next-auth.session-token",
-    },
-  },
-  secret: process.env.NEXTAUTH_SECRET || "default_secret_for_development",
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    authorized: ({ req, token }) => {
-      const path = req.nextUrl.pathname;
-      if (path.startsWith("/admin/login")) {
-        return true;
-      }
-      const hasCookie =
-        !!req.cookies.get("next-auth.session-token")?.value ||
-        !!req.cookies.get("__Secure-next-auth.session-token")?.value;
-      return !!token || hasCookie;
-    },
+    authorized: authorizedCallback,
   },
 });
 

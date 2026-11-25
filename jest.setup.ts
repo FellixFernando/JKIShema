@@ -3,6 +3,7 @@ import { TextEncoder, TextDecoder } from 'util'
 
 // Explicitly default WhatsApp service to mock mode in test environment
 process.env.WHATSAPP_MOCK_MODE = process.env.WHATSAPP_MOCK_MODE || 'true'
+process.env.NEXTAUTH_SECRET = 'test-secret'
 
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder

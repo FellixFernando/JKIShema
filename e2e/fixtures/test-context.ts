@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks -- Playwright fixtures take a callback named `use()`, not React hooks. */
 import { test as baseTest, expect } from '@playwright/test'
 import crypto from 'crypto'
 import { db } from '@/lib/db'
