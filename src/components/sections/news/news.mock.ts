@@ -6,7 +6,7 @@ export const mockNewsData: NewsItem[] = [
         title: "SHEMA CHRISTMAS CONCERT 2026",
         slug: "shema-christmas-concert-2026",
         category: "ACARA",
-        imageUrl: "/images/hero/christmas-poster-new.png",
+        imageUrl: "/images/hero/Poster Christmas Concert LANDSCAPE (1).jpg.jpeg",
         publishedAt: "18 DESEMBER 2026",
         excerpt:
             "Malam perayaan sukacita Natal dengan paduan suara, drama musikal, dan orkestra memperingati kelahiran Juru Selamat dunia.",

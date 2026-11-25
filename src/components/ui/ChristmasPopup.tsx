@@ -115,10 +115,10 @@ export default function ChristmasPopup({
 
                 {/* Poster Container */}
                 <div className="relative w-full flex flex-col items-center overflow-hidden bg-black">
-                    <div className="relative w-full">
+                    <div className="relative w-full contain">
                         {/* Christmas Poster Image */}
                         <img
-                            src="/images/hero/christmas-poster-new.png"
+                            src="/images/hero/Poster Christmas Concert LANDSCAPE (1).jpg.jpeg"
                             alt="Christmas Celebration JKI Shema"
                             className="w-full h-auto object-cover max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] block"
                         />
