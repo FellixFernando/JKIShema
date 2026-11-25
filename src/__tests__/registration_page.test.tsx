@@ -9,6 +9,18 @@ global.fetch = mockFetch
 describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/status') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ remaining: 10, is_open: true }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, data: [] }),
+      })
+    })
   })
 
   it('renders registration form, submits participant data with branch selected, and renders visual QR code with download button', async () => {
@@ -25,12 +37,20 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
       registration_type: 'ONLINE',
     }
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        data: [mockReturnedParticipant],
-      }),
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/status') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ remaining: 10, is_open: true }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockReturnedParticipant],
+        }),
+      })
     })
 
     render(<RegisterPage />)
@@ -107,11 +127,6 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   })
 
   it('Scenario A – Telah Berjemaat: displays dropdown and submits selected JKI Shema Sunter branch', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, data: [] }),
-    })
-
     render(<RegisterPage />)
 
     fireEvent.change(screen.getByPlaceholderText('Masukkan nama lengkap'), {
@@ -151,11 +166,6 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   })
 
   it('Scenario B – Gereja Lain: selects Gereja Lain, verifies no additional text input, and submits Gereja Lain', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, data: [] }),
-    })
-
     render(<RegisterPage />)
 
     fireEvent.change(screen.getByPlaceholderText('Masukkan nama lengkap'), {
@@ -193,11 +203,6 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   })
 
   it('Scenario C – Belum Berjemaat: hides dropdown and submits TIDAK_BERGEREJA with undefined church_branch', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, data: [] }),
-    })
-
     render(<RegisterPage />)
 
     fireEvent.change(screen.getByPlaceholderText('Masukkan nama lengkap'), {
@@ -235,11 +240,6 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   })
 
   it('Scenario D – Switching Status: clears branch selection when switched to Belum Berjemaat', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, data: [] }),
-    })
-
     render(<RegisterPage />)
 
     fireEvent.change(screen.getByPlaceholderText('Masukkan nama lengkap'), {
@@ -282,11 +282,6 @@ describe('RegisterPage End-to-End Registration Flow & Scenarios', () => {
   })
 
   it('Scenario E – Additional Participants: handles multiple participants with independent branch selection', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, data: [] }),
-    })
-
     render(<RegisterPage />)
 
     // Registrant 1

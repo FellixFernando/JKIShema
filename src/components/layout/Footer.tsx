@@ -148,7 +148,12 @@ export default function Footer() {
 
                 {/* Bottom Row: Copyright */}
                 <div className="pt-16 sm:pt-20 text-center text-xs text-zinc-400 font-normal">
-                    Copyright 2026 JKI SHEMA, All rights reserved
+                    <a href="/privacy" className="hover:text-white transition underline underline-offset-2">
+                        Kebijakan Privasi
+                    </a>
+                    <div className="mt-2">
+                        Copyright 2026 JKI SHEMA, All rights reserved
+                    </div>
                 </div>
             </div>
         </footer>

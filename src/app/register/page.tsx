@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import TicketCard from "@/components/TicketCard";
 import {
@@ -46,6 +46,18 @@ export default function RegisterPage() {
 	const [loading, setLoading] = useState(false);
 	const [errorMsg, setErrorMsg] = useState("");
 	const [successData, setSuccessData] = useState<any[] | null>(null);
+	const [waitlisted, setWaitlisted] = useState(false);
+	const [seatStatus, setSeatStatus] = useState<{
+		remaining: number;
+		is_open: boolean;
+	} | null>(null);
+
+	useEffect(() => {
+		fetch("/api/status")
+			.then((res) => res.json())
+			.then((data) => setSeatStatus(data))
+			.catch(() => {});
+	}, []);
 
 	const handleAddParticipant = () => {
 		setParticipants([
@@ -142,6 +154,11 @@ export default function RegisterPage() {
 
 			const data = await res.json();
 
+			if (data.status === "WAITLISTED") {
+				setWaitlisted(true);
+				return;
+			}
+
 			if (!res.ok) {
 				throw new Error(data.error || "Gagal melakukan pendaftaran.");
 			}
@@ -153,6 +170,36 @@ export default function RegisterPage() {
 			setLoading(false);
 		}
 	};
+
+	if (waitlisted) {
+		return (
+			<div className="min-h-screen bg-[#FFFCF8] flex items-center justify-center p-4 sm:p-6 py-12">
+				<div className="bg-white max-w-xl w-full p-6 sm:p-8 rounded-3xl shadow-xl shadow-[#7C152D]/5 border border-[#A43A52]/20 space-y-6">
+					<div className="w-16 h-16 bg-[#F5E8EB] text-[#7C152D] border border-[#A43A52]/30 rounded-full flex items-center justify-center mx-auto shadow-inner">
+						<CheckCircle2 className="w-9 h-9 text-[#7C152D]" />
+					</div>
+					<div className="text-center space-y-2">
+						<span className="text-xs font-bold text-[#7C152D] uppercase tracking-wider">
+							JKI SHEMA CHRISTMAS CONCERT
+						</span>
+						<h1 className="text-2xl font-black text-[#292329]">
+							Terima kasih telah mendaftar.
+						</h1>
+						<p className="text-sm text-[#766C70]">
+							Saat ini seluruh kursi telah terisi, sehingga pendaftaran Anda masuk
+							ke daftar tunggu. Kami akan mengirimkan tiket melalui WhatsApp
+							apabila ada kursi yang tersedia.
+						</p>
+					</div>
+					<Link
+						href="/"
+						className="w-full text-center block bg-[#7C152D] hover:bg-[#571020] text-white font-bold text-sm py-3.5 rounded-xl transition shadow-md shadow-[#7C152D]/20 cursor-pointer">
+						Kembali ke Halaman Utama
+					</Link>
+				</div>
+			</div>
+		);
+	}
 
 	if (successData) {
 		return (
@@ -324,6 +371,17 @@ export default function RegisterPage() {
 					</div>
 				)}
 
+				{seatStatus && (seatStatus.is_open === false || seatStatus.remaining <= 0) && (
+					<div className="bg-[#F5E8EB] border border-[#A43A52]/40 text-[#7C152D] text-sm p-4 rounded-xl font-medium flex items-start gap-2.5">
+						<Info className="w-4 h-4 mt-0.5 shrink-0" />
+						<span>
+							{seatStatus.is_open === false
+								? "Pendaftaran sedang ditutup oleh panitia."
+								: "Seluruh kursi telah terisi. Pendaftaran baru akan masuk ke daftar tunggu."}
+						</span>
+					</div>
+				)}
+
 				{/* Form Body */}
 				<form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
 					{participants.map((participant, index) => (
@@ -470,6 +528,16 @@ export default function RegisterPage() {
 									<span className="text-[#7C152D] font-bold">*Wajib</span>
 								</label>
 							</div>
+
+							<p className="text-[11px] text-[#766C70]">
+								Dengan mendaftar, Anda menyetujui{" "}
+								<Link
+									href="/privacy"
+									className="font-semibold text-[#7C152D] underline underline-offset-2 hover:text-[#571020]">
+									Kebijakan Privasi
+								</Link>
+								.
+							</p>
 						</div>
 					))}
 
