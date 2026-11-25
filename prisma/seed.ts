@@ -1,32 +1,28 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { assertStrongPassword, requireEnv } from '../src/lib/admin-credentials'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  const masterPassword = await bcrypt.hash('2810200616022005', 10)
+  const username = requireEnv('MASTER_ADMIN_USERNAME')
+  const password = assertStrongPassword(requireEnv('MASTER_ADMIN_PASSWORD'), 'MASTER_ADMIN_PASSWORD')
 
-  const admin = await prisma.user.upsert({
-    where: { username: 'masterjkishema' },
-    update: {
-      password_hash: masterPassword,
-    },
-    create: {
-      username: 'masterjkishema',
-      password_hash: masterPassword,
-      role: 'MASTER',
-    },
+  const password_hash = await bcrypt.hash(password, 10)
+
+  const user = await prisma.user.upsert({
+    where: { username },
+    update: { password_hash },
+    create: { username, password_hash, role: 'MASTER' },
   })
 
-  console.log('✅ Default Master Admin created/updated:')
-  console.log('Username: masterjkishema')
-  console.log('Password: 2810200616022005')
+  console.log(`Master admin ready. Username: ${user.username}, role: ${user.role}`)
 }
 
 main()
-  .catch((e) => {
+  .catch((e: unknown) => {
     console.error(e)
-    process.exit(1)
+    process.exitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect()

@@ -66,15 +66,26 @@ Saat membuat migrasi baru di database lokal, gunakan `npx prisma migrate dev --n
 Jangan gunakan `npx prisma db push` pada database bersama: perintah itu tidak mencatat riwayat migrasi
 dan menyebabkan skema database berbeda dari `prisma/migrations`.
 
-### 5. Buat Akun Master Admin Pertama (Seeding)
-Jalankan seeder untuk mengisi akun Master Admin default:
+### 5. Buat Akun Admin (Seeding)
+Seed membaca kredensial dari environment variable (tidak ada password default di dalam kode). Password minimal 12 karakter. Isi `MASTER_ADMIN_USERNAME` dan `MASTER_ADMIN_PASSWORD` di `.env`, lalu jalankan:
+
 ```bash
 npx prisma db seed
 ```
-> Script seed berjalan lewat `ts-node -P tsconfig.scripts.json` (lihat `package.json`).
-> **Default Kredensial Admin:**
-> - Username: `master`
-> - Password: `master123`
+
+Kelola akun admin lewat script (password tidak pernah dicetak ulang):
+
+```bash
+# Buat admin baru (password dibuat otomatis bila --password tidak diisi)
+npm run create-admin -- --username admin --role ADMIN
+
+# Reset password admin yang sudah ada (variabel bisa juga diisi di .env)
+ADMIN_USERNAME=admin NEW_ADMIN_PASSWORD=password-baru-yang-panjang npm run reset-admin-password
+```
+
+Di PowerShell, set variabelnya lebih dulu: `$env:ADMIN_USERNAME="admin"; $env:NEW_ADMIN_PASSWORD="..."`.
+
+> Script seed dan script admin berjalan lewat `ts-node -P tsconfig.scripts.json` (lihat `package.json`).
 
 ### 6. Jalankan Unit Test (TDD Check)
 Pastikan seluruh pengujian fitur dalam keadaan lulus (PASS):

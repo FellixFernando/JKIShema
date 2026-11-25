@@ -1,19 +1,34 @@
-import { db } from '../src/lib/db'
+import 'dotenv/config'
 import bcrypt from 'bcryptjs'
+import { PrismaClient } from '@prisma/client'
+import { assertStrongPassword, requireEnv } from '../src/lib/admin-credentials'
 
-async function updatePassword() {
-  const hash = await bcrypt.hash('2810200616022005', 10)
-  const user = await db.user.update({
-    where: { username: 'masterjkishema' },
-    data: { password_hash: hash },
-  })
-  console.log('Password updated successfully for:', user.username)
-  const match = await bcrypt.compare('2810200616022005', user.password_hash)
-  console.log('Verification check - password matches:', match)
+const prisma = new PrismaClient()
+
+async function main() {
+  const username = requireEnv('ADMIN_USERNAME')
+  const password = assertStrongPassword(requireEnv('NEW_ADMIN_PASSWORD'))
+
+  const password_hash = await bcrypt.hash(password, 10)
+
+  try {
+    await prisma.user.update({ where: { username }, data: { password_hash } })
+    console.log(`Password updated for: ${username}`)
+  } catch (e) {
+    if (typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2025') {
+      console.error(`No user found with username "${username}".`)
+      process.exitCode = 1
+      return
+    }
+    throw e
+  }
 }
 
-updatePassword()
-  .catch(console.error)
+main()
+  .catch((e: unknown) => {
+    console.error(e)
+    process.exitCode = 1
+  })
   .finally(async () => {
-    await db.$disconnect()
+    await prisma.$disconnect()
   })
