@@ -29,6 +29,8 @@ describe('Phase 6C.4: Admin Dashboard WhatsApp Integration', () => {
     onSiteCount: 2,
     checkedInCount: 3,
     cancelledCount: 1,
+    waitlistCount: 0,
+    isRegistrationOpen: true,
     remainingOnlineQuota: 392,
     whatsappDeliveryStats: {
       delivered: 5,

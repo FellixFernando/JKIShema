@@ -48,6 +48,7 @@ describe('Phase 6C.2: Dashboard Telemetry & Participant Delivery Filtering', () 
         .mockResolvedValueOnce(20) // on-site
         .mockResolvedValueOnce(150) // checked-in
         .mockResolvedValueOnce(10) // cancelled
+        .mockResolvedValueOnce(0) // waitlisted
 
       // Mock groupBy aggregation
       ;(db.whatsAppDelivery.groupBy as jest.Mock).mockResolvedValue([
@@ -65,7 +66,7 @@ describe('Phase 6C.2: Dashboard Telemetry & Participant Delivery Filtering', () 
       expect(stats.totalRegistered).toBe(300)
       expect(stats.onlineCount).toBe(280)
       expect(stats.checkedInCount).toBe(150)
-      expect(stats.remainingOnlineQuota).toBe(120) // 400 - 280
+      expect(stats.remainingOnlineQuota).toBe(170) // 450 - 280
 
       // WhatsApp Delivery stats
       expect(stats.whatsappDeliveryStats).toBeDefined()
@@ -83,6 +84,7 @@ describe('Phase 6C.2: Dashboard Telemetry & Participant Delivery Filtering', () 
     it('handles zero-count statuses gracefully when no delivery records exist', async () => {
       ;(db.systemConfig.findUnique as jest.Mock).mockResolvedValue({ value: '400' })
       ;(db.participant.count as jest.Mock)
+        .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(0)

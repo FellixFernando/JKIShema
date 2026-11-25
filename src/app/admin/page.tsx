@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import AdminConfirmModal, { ConfirmModalAction } from '@/components/AdminConfirmModal'
 import WhatsAppDeliveryBadge from '@/components/admin/WhatsAppDeliveryBadge'
@@ -18,6 +18,8 @@ interface Stats {
   onSiteCount: number
   checkedInCount: number
   cancelledCount: number
+  waitlistCount: number
+  isRegistrationOpen: boolean
   remainingOnlineQuota: number
   whatsappDeliveryStats?: WhatsAppDeliveryStats
 }
@@ -38,10 +40,11 @@ interface Participant {
   church_branch?: string
   is_child: boolean
   qr_token?: string
-  status: 'REGISTERED' | 'CHECKED_IN' | 'CANCELLED'
+  status: 'REGISTERED' | 'CHECKED_IN' | 'CANCELLED' | 'WAITLISTED'
   registration_type: 'ONLINE' | 'ON_SITE'
   checked_in_at?: string
   created_at: string
+  waitlist_position?: number | null
   delivery?: ParticipantDelivery | null
 }
 
@@ -57,6 +60,9 @@ export default function AdminDashboardPage() {
   const [actionMsg, setActionMsg] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const reqIdRef = useRef(0)
+
+  const { data: session } = useSession()
+  const isMaster = (session?.user as any)?.role === 'MASTER'
 
   // Toggle Visibility for Admission Mode
   const [showWaStats, setShowWaStats] = useState<boolean>(false)
@@ -87,6 +93,27 @@ export default function AdminDashboardPage() {
       console.error(err)
     }
   }, [])
+
+  const handleToggleRegistration = async () => {
+    if (!stats) return
+    const next = !stats.isRegistrationOpen
+    try {
+      const res = await fetch('/api/admin/settings/registration', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_registration_open: next }),
+      })
+      if (res.ok) {
+        setActionMsg(next ? 'Pendaftaran dibuka.' : 'Pendaftaran ditutup.')
+        fetchStats()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setActionMsg(data.error || 'Gagal mengubah status pendaftaran.')
+      }
+    } catch (err: any) {
+      setActionMsg(err.message || 'Terjadi kesalahan sistem saat mengubah status pendaftaran.')
+    }
+  }
 
   const fetchParticipants = useCallback(async () => {
     const curId = ++reqIdRef.current
@@ -293,8 +320,21 @@ export default function AdminDashboardPage() {
               <h2 className="text-xs uppercase font-bold text-slate-400 tracking-wider">
                 Statistik Pendaftaran Acara
               </h2>
+              {isMaster && (
+                <button
+                  type="button"
+                  onClick={handleToggleRegistration}
+                  className={`text-xs font-bold px-3.5 py-2 rounded-xl transition shadow cursor-pointer ${
+                    stats.isRegistrationOpen
+                      ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  }`}
+                >
+                  {stats.isRegistrationOpen ? 'Tutup Pendaftaran' : 'Buka Pendaftaran'}
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
               <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1">
                 <span className="text-xs text-slate-400 font-semibold uppercase">Total Kapasitas</span>
                 <p className="text-2xl font-black text-white">{stats.totalCapacity}</p>
@@ -320,15 +360,23 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1">
-                <span className="text-xs text-indigo-400 font-semibold uppercase">Sisa Kuota Web</span>
-                <p className="text-2xl font-black text-indigo-400">{stats.remainingOnlineQuota}</p>
-                <p className="text-[10px] text-slate-500">Dari {stats.maxOnlineQuota} online</p>
+                <span className="text-xs text-indigo-400 font-semibold uppercase">Sisa Kursi</span>
+                <p className="text-2xl font-black text-indigo-400">
+                  {Math.max(0, stats.totalCapacity - stats.totalRegistered)}
+                </p>
+                <p className="text-[10px] text-slate-500">Dari {stats.totalCapacity}</p>
               </div>
 
               <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1">
                 <span className="text-xs text-rose-400 font-semibold uppercase">Batal (RSVP)</span>
                 <p className="text-2xl font-black text-rose-400">{stats.cancelledCount}</p>
                 <p className="text-[10px] text-slate-500">Kuota Terbebas</p>
+              </div>
+
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded-2xl space-y-1">
+                <span className="text-xs text-orange-400 font-semibold uppercase">Daftar Tunggu</span>
+                <p className="text-2xl font-black text-orange-400">{stats.waitlistCount}</p>
+                <p className="text-[10px] text-slate-500">Menunggu Kuota</p>
               </div>
             </div>
           </div>
@@ -471,6 +519,7 @@ export default function AdminDashboardPage() {
                   <option value="REGISTERED">Terdaftar (Belum Check-In)</option>
                   <option value="CHECKED_IN">Sudah Check-In</option>
                   <option value="CANCELLED">Batal / Cancelled</option>
+                  <option value="WAITLISTED">Daftar Tunggu (Waitlist)</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
                   <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -621,6 +670,11 @@ export default function AdminDashboardPage() {
                           {p.status === 'CANCELLED' && (
                             <span className="bg-rose-500/20 text-rose-300 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-rose-500/30">
                               Batal
+                            </span>
+                          )}
+                          {p.status === 'WAITLISTED' && (
+                            <span className="bg-orange-500/20 text-orange-300 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-orange-500/30">
+                              Daftar Tunggu{p.waitlist_position ? ` #${p.waitlist_position}` : ''}
                             </span>
                           )}
                         </td>

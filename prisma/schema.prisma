@@ -38,6 +38,7 @@ enum WebhookEventType {
 
 enum RegistrationStatus {
   REGISTERED
+  WAITLISTED
   CHECKED_IN
   CANCELLED
 }

@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { getRegistrationSettings } from '@/services/config.service'
 import { RegistrationStatus, WhatsAppDeliveryStatus } from '@prisma/client'
 
 export const VALID_WA_DELIVERY_STATUSES: WhatsAppDeliveryStatus[] = [
@@ -27,10 +28,8 @@ export interface WhatsAppDeliveryStats {
 }
 
 export async function getDashboardStats() {
-  const maxQuotaConfig = await db.systemConfig.findUnique({
-    where: { key: 'max_online_quota' },
-  })
-  const maxOnlineQuota = maxQuotaConfig ? parseInt(maxQuotaConfig.value, 10) : 400
+  const settings = await getRegistrationSettings()
+  const maxOnlineQuota = settings.maxOnlineQuota
 
   const totalRegistered = await db.participant.count({
     where: { status: { in: ['REGISTERED', 'CHECKED_IN'] } },
@@ -50,6 +49,10 @@ export async function getDashboardStats() {
 
   const cancelledCount = await db.participant.count({
     where: { status: 'CANCELLED' },
+  })
+
+  const waitlistCount = await db.participant.count({
+    where: { status: 'WAITLISTED' },
   })
 
   // WhatsApp Delivery aggregation via groupBy to avoid N+1 queries
@@ -83,13 +86,15 @@ export async function getDashboardStats() {
   }
 
   return {
-    totalCapacity: 440,
+    totalCapacity: settings.totalCapacity,
     maxOnlineQuota,
     totalRegistered,
     onlineCount,
     onSiteCount,
     checkedInCount,
     cancelledCount,
+    waitlistCount,
+    isRegistrationOpen: settings.isRegistrationOpen,
     remainingOnlineQuota: Math.max(0, maxOnlineQuota - onlineCount),
     whatsappDeliveryStats,
   }
@@ -157,6 +162,17 @@ export async function getParticipants({ search, status, waStatus, registrationTy
     },
   })
 
+  // Waitlist position is only computed when the page actually contains a waitlisted row.
+  let waitlistPositions: Map<string, number> | null = null
+  if (participants.some((p: any) => p.status === 'WAITLISTED')) {
+    const waitlisted = await db.participant.findMany({
+      where: { status: 'WAITLISTED' },
+      orderBy: { created_at: 'asc' },
+      select: { id: true },
+    })
+    waitlistPositions = new Map(waitlisted.map((p: any, i: number) => [p.id, i + 1]))
+  }
+
   return participants.map((p: any) => ({
     id: p.id,
     full_name: p.full_name,
@@ -168,6 +184,7 @@ export async function getParticipants({ search, status, waStatus, registrationTy
     registration_type: p.registration_type,
     checked_in_at: p.checked_in_at,
     created_at: p.created_at,
+    waitlist_position: p.status === 'WAITLISTED' ? waitlistPositions?.get(p.id) ?? null : null,
     delivery: p.delivery
       ? {
           id: p.delivery.id,
