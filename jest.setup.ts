@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
+import { resetRateLimitForTests } from '@/lib/rate-limit'
+
+// Keep rate-limit buckets from leaking between route tests.
+beforeEach(() => {
+  resetRateLimitForTests()
+})
 
 // Explicitly default WhatsApp service to mock mode in test environment
 process.env.WHATSAPP_MOCK_MODE = process.env.WHATSAPP_MOCK_MODE || 'true'
