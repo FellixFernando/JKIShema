@@ -72,24 +72,30 @@ describe('Registration Service (Single Participant)', () => {
       where: {
         full_name: 'Budi Santoso',
         whatsapp_number: { in: ['628123456789', '08123456789'] },
-        status: { in: ['REGISTERED', 'CHECKED_IN'] },
+        status: { in: ['REGISTERED', 'CHECKED_IN', 'WAITLISTED'] },
       },
     })
     expect(db.participant.create).toHaveBeenCalled()
   })
 
-  it('should reject registration if max quota is reached', async () => {
+  it('waitlists an online registration when the venue capacity is full', async () => {
     (db.systemConfig.findUnique as jest.Mock).mockResolvedValue({ value: '400' });
-    (db.participant.count as jest.Mock).mockResolvedValue(400)
+    (db.participant.count as jest.Mock).mockResolvedValue(450)
+    ;(db.participant.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(db.participant.create as jest.Mock).mockImplementation(({ data }) => Promise.resolve({
+      id: 'p-wait-1',
+      ...data,
+      created_at: new Date(),
+    }))
 
-    await expect(
-      registerParticipant({
-        full_name: 'Budi Santoso',
-        whatsapp_number: '08123456789',
-        church_status: 'BERGEREJA',
-        is_wa_opt_in: true,
-      })
-    ).rejects.toThrow('Kuota pendaftaran online telah penuh.')
+    const result = await registerParticipant({
+      full_name: 'Budi Santoso',
+      whatsapp_number: '08123456789',
+      church_status: 'BERGEREJA',
+      is_wa_opt_in: true,
+    })
+
+    expect(result.status).toBe('WAITLISTED')
   })
 
   it('should successfully register participant and generate qr_token', async () => {

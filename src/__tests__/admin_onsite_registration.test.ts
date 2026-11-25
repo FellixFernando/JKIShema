@@ -441,13 +441,12 @@ describe('Admin On-Site Registration — Service & API Suite', () => {
   })
 
   // 5. Total Venue Capacity & Concurrency Enforcement
-  it('allows ON_SITE registration when online quota (400) is reached but total capacity (440) is not', async () => {
-    // 400 online participants exist
+  it('allows ON_SITE registration while seats remain below the total capacity (450)', async () => {
     ;(db.participant.count as jest.Mock).mockResolvedValue(400)
 
     const result = await registerParticipant(
       {
-        full_name: 'Walkin 401',
+        full_name: 'Walkin 450',
         whatsapp_number: '081299990001',
         church_status: 'BERGEREJA',
         is_wa_opt_in: true,
@@ -459,12 +458,12 @@ describe('Admin On-Site Registration — Service & API Suite', () => {
     expect(result.registration_type).toBe('ON_SITE')
   })
 
-  it('allows registration exactly at boundary: 439 existing + 1 registrant = 440', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(439)
+  it('allows registration exactly at boundary: 449 existing + 1 registrant = 450', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(449)
 
     const result = await registerParticipant(
       {
-        full_name: 'Seat 440 User',
+        full_name: 'Seat 450 User',
         whatsapp_number: '081299990440',
         church_status: 'BERGEREJA',
         is_wa_opt_in: true,
@@ -475,8 +474,8 @@ describe('Admin On-Site Registration — Service & API Suite', () => {
     expect(result).toBeDefined()
   })
 
-  it('rejects registration when venue capacity (440) is reached (440 + 1 = 441)', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(440)
+  it('rejects registration when venue capacity (450) is reached (450 + 1 = 451)', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(450)
 
     await expect(
       registerParticipant(
@@ -488,11 +487,11 @@ describe('Admin On-Site Registration — Service & API Suite', () => {
         },
         { registrationType: 'ON_SITE' }
       )
-    ).rejects.toThrow('Kapasitas total acara (440 peserta) telah penuh.')
+    ).rejects.toThrow('Kapasitas penuh. Batalkan peserta yang tidak hadir terlebih dahulu.')
   })
 
-  it('atomically rejects group registration exceeding capacity (e.g. 438 + 3 = 441)', async () => {
-    ;(db.participant.count as jest.Mock).mockResolvedValue(438)
+  it('atomically rejects group registration exceeding capacity (e.g. 448 + 3 = 451)', async () => {
+    ;(db.participant.count as jest.Mock).mockResolvedValue(448)
 
     await expect(
       registerBatchParticipants(
@@ -503,7 +502,7 @@ describe('Admin On-Site Registration — Service & API Suite', () => {
         ],
         { registrationType: 'ON_SITE' }
       )
-    ).rejects.toThrow('Kapasitas total acara tidak mencukupi untuk 3 peserta')
+    ).rejects.toThrow('Kapasitas penuh. Batalkan peserta yang tidak hadir terlebih dahulu.')
 
     // Atomicity: zero records created
     expect(db.participant.create).not.toHaveBeenCalled()

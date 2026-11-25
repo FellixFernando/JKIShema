@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { ChurchStatus } from '@prisma/client'
 import { normalizeWhatsAppNumber } from '@/lib/phone'
-import { deliverParticipantTicket } from './whatsapp.service'
+import { getRegistrationSettings } from './config.service'
 import crypto from 'crypto'
 
 export interface SingleParticipantInput {
@@ -96,49 +96,13 @@ export async function registerBatchParticipants(
       }
     }
 
-    // 1. Online quota check (only enforced when registrationType === 'ONLINE')
-    if (registrationType === 'ONLINE') {
-      const maxQuotaConfig = tx.systemConfig && typeof tx.systemConfig.findUnique === 'function'
-        ? await tx.systemConfig.findUnique({ where: { key: 'max_online_quota' } })
-        : null
-      const maxQuota = maxQuotaConfig ? parseInt(maxQuotaConfig.value, 10) : 400
-
-      const currentOnlineCount = await tx.participant.count({
-        where: {
-          registration_type: 'ONLINE',
-          status: { in: ['REGISTERED', 'CHECKED_IN'] },
-        },
-      })
-
-      if (currentOnlineCount + sanitizedInputs.length > maxQuota) {
-        if (sanitizedInputs.length === 1) {
-          throw new Error('Kuota pendaftaran online telah penuh.')
-        }
-        throw new Error('Kuota pendaftaran online tidak mencukupi untuk jumlah peserta ini.')
-      }
+    // 1. Registration window: online registration can be closed by the operator.
+    const settings = await getRegistrationSettings(tx)
+    if (registrationType === 'ONLINE' && !settings.isRegistrationOpen) {
+      throw new Error('Pendaftaran sedang ditutup.')
     }
 
-    // 2. Total venue capacity check (440 participants combined)
-    const totalVenueCapacity = 440
-    const totalActiveCount = await tx.participant.count({
-      where: {
-        status: { in: ['REGISTERED', 'CHECKED_IN'] },
-      },
-    })
-
-    if (totalActiveCount + sanitizedInputs.length > totalVenueCapacity) {
-      if (sanitizedInputs.length === 1) {
-        throw new Error('Kapasitas total acara (440 peserta) telah penuh.')
-      }
-      throw new Error(
-        `Kapasitas total acara tidak mencukupi untuk ${sanitizedInputs.length} peserta (sisa kuota: ${Math.max(
-          0,
-          totalVenueCapacity - totalActiveCount
-        )}).`
-      )
-    }
-
-    // 3. Validate duplicate for each participant in batch, considering legacy 08... formats
+    // 2. Validate duplicate for each participant, including already-waitlisted rows
     for (const participantData of sanitizedInputs) {
       const legacyPhone = '08' + participantData.whatsapp_number.slice(3)
       const phoneVariants = [participantData.whatsapp_number, legacyPhone]
@@ -147,7 +111,7 @@ export async function registerBatchParticipants(
         where: {
           full_name: participantData.full_name,
           whatsapp_number: { in: phoneVariants },
-          status: { in: ['REGISTERED', 'CHECKED_IN'] },
+          status: { in: ['REGISTERED', 'CHECKED_IN', 'WAITLISTED'] },
         },
       })
 
@@ -156,13 +120,26 @@ export async function registerBatchParticipants(
       }
     }
 
-    // 4. Persist participants and delivery records atomically
+    // 3. Venue capacity. A batch either fits in full or is handled as a whole.
+    const totalActiveCount = await tx.participant.count({
+      where: {
+        status: { in: ['REGISTERED', 'CHECKED_IN'] },
+      },
+    })
+
+    const fits = totalActiveCount + sanitizedInputs.length <= settings.totalCapacity
+
+    if (!fits && registrationType === 'ON_SITE') {
+      throw new Error('Kapasitas penuh. Batalkan peserta yang tidak hadir terlebih dahulu.')
+    }
+
+    // 4. Persist participants. Waitlisted batches leave no delivery row and are NOT_SENT.
     const list = []
     const now = new Date()
     for (const item of sanitizedInputs) {
       const qr_token = crypto.randomUUID()
-      const status = immediateCheckIn ? 'CHECKED_IN' : 'REGISTERED'
-      const checked_in_at = immediateCheckIn ? now : null
+      const status = fits ? (immediateCheckIn ? 'CHECKED_IN' : 'REGISTERED') : 'WAITLISTED'
+      const checked_in_at = fits && immediateCheckIn ? now : null
 
       const participant = await tx.participant.create({
         data: {
@@ -176,38 +153,27 @@ export async function registerBatchParticipants(
           status,
           registration_type: registrationType,
           checked_in_at,
-          wa_delivery_status: 'PENDING',
+          wa_delivery_status: fits ? 'PENDING' : 'NOT_SENT',
         },
       })
 
-      await tx.whatsAppDelivery.create({
-        data: {
-          participant_id: participant.id,
-          participant_name: participant.full_name,
-          qr_token_snapshot: qr_token,
-          recipient_phone: participant.whatsapp_number,
-          status: 'PENDING',
-          total_attempts: 0,
-        },
-      })
+      if (fits) {
+        await tx.whatsAppDelivery.create({
+          data: {
+            participant_id: participant.id,
+            participant_name: participant.full_name,
+            qr_token_snapshot: qr_token,
+            recipient_phone: participant.whatsapp_number,
+            status: 'PENDING',
+            total_attempts: 0,
+          },
+        })
+      }
 
       list.push(participant)
     }
     return list
   })
-
-  // Execute WhatsApp delivery pipeline synchronously after the registration transaction completes.
-  // Failure in WhatsApp delivery MUST NOT roll back or cancel successful participant registration.
-  for (const participant of createdParticipants) {
-    try {
-      await deliverParticipantTicket(participant.id)
-    } catch (dispatchErr) {
-      console.error(
-        `[REGISTRATION] WhatsApp delivery pipeline exception for participant ${participant.id}:`,
-        dispatchErr
-      )
-    }
-  }
 
   return createdParticipants
 }
