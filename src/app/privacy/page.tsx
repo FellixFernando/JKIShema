@@ -71,6 +71,27 @@ export default function PrivacyPage() {
 
 				<section className="space-y-3">
 					<h2 className="text-sm font-bold text-[#7C152D] uppercase tracking-wider">
+						Penghapusan Data
+					</h2>
+					<p className="text-sm text-[#292329] leading-relaxed">
+						Untuk meminta penghapusan data Anda, hubungi{" "}
+						<a
+							href="mailto:jkishema21@gmail.com"
+							className="font-semibold text-[#7C152D] underline underline-offset-2 break-all">
+							jkishema21@gmail.com
+						</a>{" "}
+						atau{" "}
+						<a
+							href="tel:+6281511140377"
+							className="font-semibold text-[#7C152D] underline underline-offset-2">
+							+62 81511140377
+						</a>
+						. Permintaan diproses dalam 7 hari kerja.
+					</p>
+				</section>
+
+				<section className="space-y-3">
+					<h2 className="text-sm font-bold text-[#7C152D] uppercase tracking-wider">
 						Kontak
 					</h2>
 					<div className="text-sm text-[#292329] leading-relaxed space-y-1">
