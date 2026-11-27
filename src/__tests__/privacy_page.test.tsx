@@ -7,7 +7,8 @@ describe('Privacy page', () => {
     render(<PrivacyPage />)
 
     expect(screen.getByRole('heading', { name: /Kebijakan Privasi/i })).toBeInTheDocument()
-    expect(screen.getByText('jkishema21@gmail.com')).toBeInTheDocument()
-    expect(screen.getByText(/\+62 81511140377/)).toBeInTheDocument()
+    // The contact appears twice since the deletion section repeats it.
+    expect(screen.getAllByText('jkishema21@gmail.com').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/\+62 81511140377/).length).toBeGreaterThanOrEqual(1)
   })
 })
